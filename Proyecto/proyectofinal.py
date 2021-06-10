@@ -185,6 +185,48 @@ def ShuffleData(X, Y):
 
 ##################### Visualizar Datos #####################
 
+# Muestra distintos estadísticos sobre los datos
+def DataInformation(X_train, Y_train):
+    #Distribución de las clases
+    dataLabelDistribution(X_train, Y_train)
+    
+    #Información sobre los atributos
+    showStatisticPlot(X_train, title="Media", par_estad='mean')
+    showStatisticPlot(X_train, title="Varianza", par_estad='var')
+    showStatisticPlot(X_train, title="Máximo", par_estad='max')
+    showStatisticPlot(X_train, title="Desviación Estándar", par_estad='std')
+    
+    
+    
+
+#Funcion para mostrar una gráfica sobre un parámetro estadistico
+    # par_estad -> Sirve para especificar que parámetro estadistico mostrar (mean|var|max|min|std)
+    # axis -> Sirve para especificar si se calculará por columnas (axis=0) o por filas (axis=1)
+def showStatisticPlot( X, par_estad='mean' , axis=0, title=None, c='red' , line=2 ,axis_title=None , scale='linear' ):
+    
+    numeros = np.arange(X[0].size)
+    
+    if par_estad == 'mean':
+        media = X.mean(axis)
+        PlotGraphic(media, title=title, c=c , line=line ,axis_title=axis_title, scale=scale)
+        
+    elif par_estad == 'var':    #Varianza
+        varianza = X.var(axis)
+        PlotGraphic(varianza, title=title, c=c , line=line ,axis_title=axis_title, scale=scale)
+        
+    elif par_estad == 'max':
+        maximo = X.max(axis)
+        PlotGraphic(maximo, title=title, c=c , line=line ,axis_title=axis_title, scale=scale)
+    
+    elif par_estad == 'min':
+        minimo = X.min(axis)
+        PlotGraphic(minimo, title=title, c=c , line=line ,axis_title=axis_title, scale=scale)
+        
+    elif par_estad == 'std':    #Desviacion estandar 
+        std = X.std(axis)
+        PlotGraphic(std, title=title, c=c , line=line ,axis_title=axis_title, scale=scale)
+    
+
 # tSNE para visualizar los datos
 def tSNE(X, Y):
     tsne = TSNE(n_components=2, verbose=1, perplexity=50, n_iter=300)
@@ -604,33 +646,7 @@ def clasificationProblem():
     classification_model = SelectBestModelClassification(X_train, Y_train)
     DefinitiveModelClassification(X_train, Y_train, X_test, Y_test, classification_model)
 
-#Funcion para mostrar una gráfica sobre un parámetro estadistico
-    # par_estad -> Sirve para especificar que parámetro estadistico mostrar (mean|var|max|min|std)
-    # axis -> Sirve para especificar si se calculará por columnas (axis=0) o por filas (axis=1)
-def mostrarPlotEstadistica( X, par_estad='mean' , axis=0, title=None, c='red' , line=2 ,axis_title=None , scale='linear' ):
     
-    numeros = np.arange(X[0].size)
-    
-    if par_estad == 'mean':
-        media = X.mean(axis)
-        PlotGraphic(media, title=title, c=c , line=line ,axis_title=axis_title, scale=scale)
-        
-    elif par_estad == 'var':    #Varianza
-        varianza = X.var(axis)
-        PlotGraphic(varianza, title=title, c=c , line=line ,axis_title=axis_title, scale=scale)
-        
-    elif par_estad == 'max':
-        maximo = X.max(axis)
-        PlotGraphic(maximo, title=title, c=c , line=line ,axis_title=axis_title, scale=scale)
-    
-    elif par_estad == 'min':
-        minimo = X.min(axis)
-        PlotGraphic(minimo, title=title, c=c , line=line ,axis_title=axis_title, scale=scale)
-        
-    elif par_estad == 'std':    #Desviacion estandar 
-        std = X.std(axis)
-        PlotGraphic(std, title=title, c=c , line=line ,axis_title=axis_title, scale=scale)
-        
     
     
 
@@ -647,13 +663,11 @@ def main():
     individualsDistribution(N)
     X_train, Y_train, X_test, Y_test = splitData(X_all, Y_all, N, 0.3)
     
-    mostrarPlotEstadistica( X_train, par_estad='mean' )
+    DataInformation(X_train, Y_train)
     
-    dataLabelDistribution(X_train, Y_train)
+    # ExperimentOutliers(X_train, Y_train)
     
-    ExperimentOutliers(X_train, Y_train)
-    
-    ExperimentReduceDimensionality(X_train, Y_train)
+    # ExperimentReduceDimensionality(X_train, Y_train)
     
     
     
