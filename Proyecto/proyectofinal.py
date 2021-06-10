@@ -33,16 +33,17 @@ np.random.seed(1)
 #------------------------------------------------------------------------#
 
 def PlotGraphic(Y, X=None, title=None, c='red' , line=2 ,axis_title=None, scale='linear'):
+    fig, ax = plt.subplots()
     if (X is not None):
-        plt.plot(X, Y, c=c , linewidth=line)
+        ax.plot(X, Y, c=c , linewidth=line)
     else:
-        plt.plot(Y, c=c , linewidth=line)
+        ax.plot(Y, c=c , linewidth=line)
         
-    plt.yscale(scale)
+    ax.set_yscale(scale)
     if (axis_title != None):
-        plt.xlabel(axis_title[0])
-        plt.ylabel(axis_title[1])
-    plt.title(title)
+        ax.set_xlabel(axis_title[0])
+        ax.set_ylabel(axis_title[1])
+    ax.set_title(title)
     plt.show()
 
 def plotData(tsne_result, y=None, title=None):
@@ -204,7 +205,7 @@ def DataInformation(X_train, Y_train):
     showStatisticPlot(X_train, title="Media", par_estad='mean')
     showStatisticPlot(X_train, title="Máximo", par_estad='max')
     showStatisticPlot(X_train, title="Mínimo", par_estad='min')
-    showStatisticPlot(X_train, title="Desviación Estándar", par_estad='std')
+    showStatisticPlot(X_train, title="Desviación Típica", par_estad='std')
     
     
     
