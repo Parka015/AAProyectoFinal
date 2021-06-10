@@ -192,8 +192,8 @@ def DataInformation(X_train, Y_train):
     
     #Información sobre los atributos
     showStatisticPlot(X_train, title="Media", par_estad='mean')
-    showStatisticPlot(X_train, title="Varianza", par_estad='var')
     showStatisticPlot(X_train, title="Máximo", par_estad='max')
+    showStatisticPlot(X_train, title="Mínimo", par_estad='min')
     showStatisticPlot(X_train, title="Desviación Estándar", par_estad='std')
     
     
@@ -317,20 +317,14 @@ def ExperimentOutliers(X, Y):
     PlotGraphic(X=var_factors, Y=percentage, title="Outliers removed", axis_title=("STD Factor", "Percent of data removed"))
 
 #Probaremos cómo cambia el resultadode un modelo simple según el número de parámetros
-def ExperimentReduceDimensionality(X, Y, start=6, interval=2, clasification=True):
-    # sizes = [i for i in range(start, X.shape[1], interval)]
-    sizes = [i for i in range(start, X.shape[1], interval)]
+def ExperimentReduceDimensionality(X, Y, start=1, end=-1, interval=2, clasification=True):
+    if (end == -1):
+        end = X.shape[1]
+    sizes = [i for i in range(start, end, interval)]
     Ecv = []
-    X, Y = removeOutliers(X, Y, 5)
     
-    # Generamemos un modelo de regresión Logistica o de regresión
-    if (clasification):
-        loss='log'
-        # Y = toLabel(Y)
-    else:
-        loss='squared_loss'
-        Y = np.ravel(Y)
-        
+    # Generamemos un modelo de regresión Logistica
+    loss='log'
     learning_rate='adaptive'
     eta_list = [0.01]
     regularization_list = ['None']
@@ -346,10 +340,7 @@ def ExperimentReduceDimensionality(X, Y, start=6, interval=2, clasification=True
         X_i = normalize(X_i)
         
         #Entrenamos un modelo y nos quedamos con su error de validación
-        if (clasification):
-            results = linearModelCrossValidation("Linear Regression", X_i, Y, loss, learning_rate, polynomial_degree, eta_list, regularization_list, alpha_list, verbose=True)
-        else:
-            results = linearModelCrossValidation("Regression", X_i, Y, loss, learning_rate, polynomial_degree, eta_list, regularization_list, alpha_list, verbose=True)
+        results = linearModelCrossValidation("Linear Regression", X_i, Y, loss, learning_rate, polynomial_degree, eta_list, regularization_list, alpha_list, verbose=True)
         
         Ecv.append(results[1])
     
@@ -438,7 +429,7 @@ def linearModelCrossValidation(name, X_train, Y_train, loss, learning_rate, poly
                                seed = 1, verbose=True):
     
     # La función de scoring de clasificación
-    scoring = 'accuracy'
+    scoring = 'balanced_accuracy'
     
     # Realizamos las transformaciones polinomiales necesarias
     poly  = PolynomialFeatures(degree=polynomial_degree, include_bias=False)
@@ -663,11 +654,16 @@ def main():
     individualsDistribution(N)
     X_train, Y_train, X_test, Y_test = splitData(X_all, Y_all, N, 0.3)
     
+    print("Conjunto de datos originales: ")
+    print(f"Train: {X_train.shape} {Y_train.shape}")
+    print(f"Test: {X_test.shape} {Y_test.shape}")
+    
     DataInformation(X_train, Y_train)
     
     # ExperimentOutliers(X_train, Y_train)
     
-    # ExperimentReduceDimensionality(X_train, Y_train)
+    ExperimentReduceDimensionality(X_train, Y_train, start=6, end=-1)
+    ExperimentReduceDimensionality(X_train, Y_train, start=2, end=100)
     
     
     
