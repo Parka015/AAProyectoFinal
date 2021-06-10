@@ -150,30 +150,38 @@ def toLabel(y):
 
 ##################### Separación Training-Test #####################
 
-#Separar los datos en training, validation y test
-def splitData(X, Y, test_percent, val_percent = None, stratify=False):
-    if (stratify):
-        stratify = Y
-    else:
-        stratify = None
+#Separar los datos en training y test
+def splitData(X, Y, N, test_percent):
+    n_individuals = np.max(N) - np.min(N) + 1
+    test_individuals = np.random.choice(n_individuals, int(n_individuals * test_percent))
     
-    #Separamos un porcentaje de test
-    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, 
-        test_size=test_percent,
-        shuffle=True,                #Aleatorio
-        stratify=stratify            #Mantiene las proporciones
-        )
+    mask = np.zeros_like(N, dtype=bool)
+    for i in range(N.shape[0]):
+        if (N[i]-1 in test_individuals):
+            mask[i] = True
+        else:
+            mask[i] = False
     
-    if (val_percent is not None):
-        #Del conjunto de train, separamos un conjunto de validación
-        X_train, X_val, Y_train, Y_val = train_test_split(X_train, Y_train, 
-            test_size=val_percent,
-            shuffle=True,                #Aleatorio
-            stratify=stratify            #Mantiene las proporciones
-            )
-        return X_train, Y_train, X_val, Y_val, X_test, Y_test
+    X_test = X[mask]
+    Y_test = Y[mask]
+    X_train = X[~mask]
+    Y_train = Y[~mask]
+    
+    #Permutamos los datos para que estén 
+    X_train, Y_train = ShuffleData(X_train, Y_train)
+    X_test, Y_test = ShuffleData(X_test, Y_test)
+    
+    # print (f"Train: {X_train.shape} {Y_train.shape}")
+    # print (f"Test: {X_test.shape} {Y_test.shape}")
     
     return X_train, Y_train, X_test, Y_test
+
+def ShuffleData(X, Y):
+    randomize = np.arange(len(X))
+    np.random.shuffle(randomize)
+    X = X[randomize]
+    Y = Y[randomize]
+    return X, Y
 
 ##################### Visualizar Datos #####################
 
@@ -207,11 +215,11 @@ def reduceDimensionality(X, Y, std_percent=0.95):
 # Muestra un gráfico con el número de muestras de cada etiqueta
 def dataLabelDistribution(X, Y):
     #Contamos el número de muestras de cada etiqueta
-    labels = np.array(toLabel(Y), np.int)
+    labels = np.array(Y, np.int)
     data = []
     unique, counts = np.unique(labels, return_counts=True)
     for val, count in zip(unique, counts):
-        data.append([f"{val+1}", count])
+        data.append([f"{val}", count])
     PlotBars(data, "Número de muestras por etiqueta")
 
 # Muestra un boxplot de los datos
@@ -223,7 +231,7 @@ def dataBoxPlot(X, Y):
     PlotBoxPlot(X, "Data Box-Plot")
 
 # Muestra un gráfico con el número de muestras de cada individuo
-def dataLabelDistribution(N):
+def individualsDistribution(N):
     #Contamos el número de muestras de cada etiqueta
     labels = N
     data = []
@@ -602,8 +610,12 @@ def clasificationProblem():
 def main():
     print("Proyecto Final")
     
-    X, Y, N = readDataHARS()
-    dataLabelDistribution(N)
+    X_all, Y_all, N = readDataHARS()
+    individualsDistribution(N)
+    X_train, Y_train, X_test, Y_test = splitData(X_all, Y_all, N, 0.3)
+    dataLabelDistribution(X_train, Y_train)
+    
+    
     
     
     
