@@ -633,25 +633,6 @@ def mostrarPlotEstadistica( X, par_estad='mean' , axis=0, title=None, c='red' , 
         std = X.std(axis)
         PlotGraphic(std, title=title, c=c , line=line ,axis_title=axis_title, scale=scale)
         
-
-#Funcion para eliminar outliers usando los k-vecinos
-    # neighbors -> Para controlar el parámetro k (cuantos vecinos)
-    # ctm -> Valor de contaminacion
-def outliersEliminationK_Neightbours(X, Y ,neighbors=20 ,ctm='auto'):
-    
-    LOF = LocalOutlierFactor(n_neighbors=neighbors, n_jobs=-1, contamination=ctm)
-
-    # ············ Eliminar los outliers sobre los datos de entrenamiento ············#
-    
-    LOF.fit(X,Y)
-    
-    # Generamos un vector con valores mas cercanos a -1 cuanto más nos se aprpoxima el dato a la media.
-    outliers = LOF.negative_outlier_factor_
-    
-    # Eliminamos los datos que consideramos demasiado alejados (menores que -1.5) 
-    X = X[outliers > -1.5]
-    Y = Y[outliers > -1.5]
-    
     
     
 
@@ -668,14 +649,30 @@ def main():
     individualsDistribution(N)
     X_train, Y_train, X_test, Y_test = splitData(X_all, Y_all, N, 0.3)
     
+    print("Dimensión X_train (sin outliers): ",X_train.shape)
     
-    mostrarPlotEstadistica( X_train, par_estad='mean' )
+    LOF = LocalOutlierFactor(n_neighbors=3, n_jobs=-1, contamination='auto')
+
+    # ············ Eliminar los outliers sobre los datos de entrenamiento ············#
     
-    dataLabelDistribution(X_train, Y_train)
+    LOF.fit(X_train,Y_train)
     
-    ExperimentOutliers(X_train, Y_train)
+    # Generamos un vector con valores mas cercanos a -1 cuanto más nos se aprpoxima el dato a la media.
+    outliers = LOF.negative_outlier_factor_
     
-    ExperimentReduceDimensionality(X_train, Y_train)
+    # Eliminamos los datos que consideramos demasiado alejados (menores que -1.5) 
+    X_train = X_train[outliers > -1.5]
+    Y_train = Y_train[outliers > -1.5]
+    
+    print("Dimensión X_train (sin outliers): ",X_train.shape)
+    
+    #mostrarPlotEstadistica( X_train, par_estad='mean' )
+    
+    #dataLabelDistribution(X_train, Y_train)
+    
+    #ExperimentOutliers(X_train, Y_train)
+    
+    #ExperimentReduceDimensionality(X_train, Y_train)
     
     
     
