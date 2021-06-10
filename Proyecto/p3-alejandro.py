@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-PROYECTO FINAL
+Practica-3
 Alejandro Pinel Martínez
-Pablo Ruiz
 """
 import numpy as np
 import pandas as pd
@@ -374,17 +373,37 @@ def preproccess(X_train, Y_train, X_test, Y_test,
 def generateModel(loss, learning_rate, eta, regularizer, alpha,max_iter = 100000, 
                                seed = 1):
     # Creamos modelo con los parámetros adecuados
+    # Dependiendo de si es clasificación o regresión usaremos SGDClassifier o SGDRegressor
+    # REGRESION
+    if (loss=='squared_loss'):
+        model   = SGDRegressor(loss=loss, 
+                            learning_rate=learning_rate,
+                            eta0 = eta, 
+                            penalty=regularizer, 
+                            alpha = alpha, 
+                            max_iter = max_iter,
+                            shuffle=True, 
+                            fit_intercept=True, 
+                            random_state = seed)
+    # Caso especial, SVR
+    elif (learning_rate=='SVR'):
+        model   = LinearSVR(loss = loss,
+                            epsilon=eta,
+                            C = alpha, 
+                            max_iter = max_iter,
+                            random_state = seed)
     # CLASIFICACION
-    model   = SGDClassifier(loss=loss, 
-                        learning_rate=learning_rate,
-                        eta0 = eta, 
-                        penalty=regularizer, 
-                        alpha = alpha, 
-                        max_iter = max_iter,
-                        shuffle=True, 
-                        fit_intercept=True, 
-                        random_state = seed,
-                        n_jobs=-1)
+    else:
+        model   = SGDClassifier(loss=loss, 
+                            learning_rate=learning_rate,
+                            eta0 = eta, 
+                            penalty=regularizer, 
+                            alpha = alpha, 
+                            max_iter = max_iter,
+                            shuffle=True, 
+                            fit_intercept=True, 
+                            random_state = seed,
+                            n_jobs=-1)
     return model
 
 # Realiza una selección de parámetros de un modelo lineal de clasificación usando cross-validation
@@ -570,6 +589,81 @@ def DefinitiveModelClassification(X_train, Y_train, X_test, Y_test, definitive_m
     #Imprimimos la matriz de confusión
     generateConfusionMatrix(X_test, Y_test, model)
 
+##################### Modelos de regresión #####################
+
+def SelectBestModelRegression(X_train, Y_train, verbose=True):
+    results = []
+    max_iter = 100000
+    
+    ################### Regresión ###################
+    
+    # Estamos usando regresión logística, luego la función de perdida será la logística
+    loss='squared_loss'
+    learning_rate = 'adaptive'
+    
+    # Parámetros que probaremos
+    eta_list = [0.1, 0.01, 0.001, 0.0001]
+    regularization_list = ['None', 'l1', 'l2']
+    alpha_list = [0.01, 0.001, 0.0001, 0.00001]
+    
+    #Versión sin transformaciones
+    polynomial_degree = 1
+    results.append(linearModelCrossValidation("Linear Regression", X_train, Y_train, loss, learning_rate, polynomial_degree, eta_list, regularization_list, alpha_list, max_iter=max_iter))
+    ################### SVR ###################
+    
+    # Estamos usando regresión logística, luego la función de perdida será la logística
+    loss='epsilon_insensitive'
+    learning_rate = 'SVR'
+    
+    # Parámetros que probaremos
+    epsilon_list = [0, 0.1, 1, 2, 5, 8, 10]
+    regularization_list = ['-']
+    C_list = [10, 1, 0.5, 0.1, 0.01]
+    
+    polynomial_degree = 1
+    results.append(linearModelCrossValidation("SVR", X_train, Y_train, loss, learning_rate, polynomial_degree, epsilon_list, regularization_list, C_list, max_iter=max_iter))
+    
+    
+    ################### Selección del mejor modelo ###################
+    
+    best_model = GetBestModel(results)
+    
+    if (verbose):
+        print(f"El mejor modelo es: {best_model[0]} con parámetros: {best_model[4]}")
+        print(f"Ein {best_model[2]} Ecv: {best_model[1]}")
+    
+    return best_model
+
+def DefinitiveModelRegression(X_train, Y_train, X_test, Y_test, definitive_model):
+    #Extraemos todos los parámetros
+    max_iter = 100000
+    name = definitive_model[0]
+    loss, learning_rate, polynomial_degree, eta, regularizer, alpha = definitive_model[4]
+    
+    # Entrenamos a nuestro modelo definitivo
+    model = linearModelTrain(name, X_train, Y_train, loss, learning_rate, polynomial_degree, eta, regularizer, alpha, max_iter=max_iter)
+    
+    poly  = PolynomialFeatures(degree=polynomial_degree, include_bias=False)
+    X_train = poly.fit_transform(X_train)
+    # Resultados sobre los datos de train
+    train_predictions = model.predict(X_train)
+    train_error = mean_squared_error(train_predictions, Y_train)
+    
+    # Resultados sobre los datos de test
+    X_test = poly.fit_transform(X_test)
+    test_predictions = model.predict(X_test)
+    test_error  = mean_squared_error(test_predictions, Y_test)
+    
+    print(f"\nMODELO DEFINITIVO: {name}")
+    print(f"Ein: {train_error}")
+    print(f"Etest: {test_error}")
+    
+    # Dibujamos gráfico del resultado
+    PlotRegressionResult(Y_train, train_predictions, "Resultado Regresión Entrenamiento")
+    PlotRegressionResult(Y_test, test_predictions, "Resultado Regresión Test")
+
+
+
 
 
 def clasificationProblem():
@@ -604,6 +698,39 @@ def clasificationProblem():
     Y_test = toLabel(Y_test)
     classification_model = SelectBestModelClassification(X_train, Y_train)
     DefinitiveModelClassification(X_train, Y_train, X_test, Y_test, classification_model)
+
+def regressionProblem():
+    print("Regresión")
+    
+    # Cargamos los datos
+    X, Y = readDataRegression()
+    # Separamos Training y Test
+    X_train, Y_train, X_test, Y_test = \
+        splitData(X, Y, test_percent=0.2)
+    
+    Y_train = np.ravel(Y_train)
+    Y_test = np.ravel(Y_test)
+        
+    print("Conjunto de datos originales: ")
+    print(f"Train: {X_train.shape} {Y_train.shape}")
+    print(f"Test: {X_test.shape} {Y_test.shape}")
+    
+    # Experimentamos con los outliers
+    # ExperimentOutliers(X_train, Y_train)
+    
+    # Experimentamos con la reducción de la dimensionalidad
+    # ExperimentReduceDimensionality(X_train, Y_train, clasification=False)
+    
+    X_train, Y_train, X_test, Y_test = preproccess(X_train, Y_train, X_test, Y_test,
+                                         remove_outliers=5, reduce_dimensionality=70,
+                                         normalize=True, show_info=True)
+    
+    print("Datos tras el preprocesamiento: ")
+    print(f"Train: {X_train.shape} {Y_train.shape}")
+    print(f"Test: {X_test.shape} {Y_test.shape}")
+    
+    regression_model = SelectBestModelRegression(X_train, Y_train)
+    DefinitiveModelRegression(X_train, Y_train, X_test, Y_test, regression_model)
 
 ##################### Main #####################
 
