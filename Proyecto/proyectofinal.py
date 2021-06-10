@@ -32,7 +32,7 @@ np.random.seed(1)
 #------------------------------- Plot -----------------------------------#
 #------------------------------------------------------------------------#
 
-def PlotGraphic(Y, X=None, title=None, c='red' , line=2 ,axis_title=None, scale='linear'):
+def PlotGraphic(Y, X=None, title=None, c='red' , line=2 ,axis_title=None, scale='linear', ylim=None):
     fig, ax = plt.subplots()
     if (X is not None):
         ax.plot(X, Y, c=c , linewidth=line)
@@ -43,6 +43,10 @@ def PlotGraphic(Y, X=None, title=None, c='red' , line=2 ,axis_title=None, scale=
     if (axis_title != None):
         ax.set_xlabel(axis_title[0])
         ax.set_ylabel(axis_title[1])
+    
+    if (ylim is not None):
+        ax.set_ylim(ylim)
+        
     ax.set_title(title)
     plt.show()
 
@@ -202,10 +206,10 @@ def DataInformation(X_train, Y_train):
     dataLabelDistribution(X_train, Y_train)
     
     #Información sobre los atributos
-    showStatisticPlot(X_train, title="Media", par_estad='mean')
+    showStatisticPlot(X_train, title="Media", par_estad='mean', ylim=[-1.01, 1.01])
     showStatisticPlot(X_train, title="Máximo", par_estad='max')
     showStatisticPlot(X_train, title="Mínimo", par_estad='min')
-    showStatisticPlot(X_train, title="Desviación Típica", par_estad='std')
+    showStatisticPlot(X_train, title="Desviación Típica", par_estad='std', ylim=[0.01, 1.01])
     
     
     
@@ -213,29 +217,29 @@ def DataInformation(X_train, Y_train):
 #Funcion para mostrar una gráfica sobre un parámetro estadistico
     # par_estad -> Sirve para especificar que parámetro estadistico mostrar (mean|var|max|min|std)
     # axis -> Sirve para especificar si se calculará por columnas (axis=0) o por filas (axis=1)
-def showStatisticPlot( X, par_estad='mean' , axis=0, title=None, c='red' , line=2 ,axis_title=None , scale='linear' ):
+def showStatisticPlot( X, par_estad='mean' , axis=0, title=None, c='red' , line=2 ,axis_title=None , scale='linear', ylim=None ):
     
     numeros = np.arange(X[0].size)
     
     if par_estad == 'mean':
         media = X.mean(axis)
-        PlotGraphic(media, title=title, c=c , line=line ,axis_title=axis_title, scale=scale)
+        PlotGraphic(media, title=title, c=c , line=line ,axis_title=axis_title, scale=scale, ylim=ylim)
         
     elif par_estad == 'var':    #Varianza
         varianza = X.var(axis)
-        PlotGraphic(varianza, title=title, c=c , line=line ,axis_title=axis_title, scale=scale)
+        PlotGraphic(varianza, title=title, c=c , line=line ,axis_title=axis_title, scale=scale, ylim=ylim)
         
     elif par_estad == 'max':
         maximo = X.max(axis)
-        PlotGraphic(maximo, title=title, c=c , line=line ,axis_title=axis_title, scale=scale)
+        PlotGraphic(maximo, title=title, c=c , line=line ,axis_title=axis_title, scale=scale, ylim=ylim)
     
     elif par_estad == 'min':
         minimo = X.min(axis)
-        PlotGraphic(minimo, title=title, c=c , line=line ,axis_title=axis_title, scale=scale)
+        PlotGraphic(minimo, title=title, c=c , line=line ,axis_title=axis_title, scale=scale, ylim=ylim)
         
     elif par_estad == 'std':    #Desviacion estandar 
         std = X.std(axis)
-        PlotGraphic(std, title=title, c=c , line=line ,axis_title=axis_title, scale=scale)
+        PlotGraphic(std, title=title, c=c , line=line ,axis_title=axis_title, scale=scale, ylim=ylim)
     
 
 # tSNE para visualizar los datos
@@ -361,40 +365,28 @@ def generateNormalizer(original_data):
 
 # Preprocesamos los datos eliminando outliers, reduciendo la dimensionalidad y normalizando
 def preproccess(X_train, Y_train, X_test, Y_test, 
-                remove_outliers=0, reduce_dimensionality=0, normalize=False, show_info=True):
+                remove_outliers=True, reduce_dimensionality=0, normalize=True, show_info=True):
 
-    # Mostramos los datos iniciales
-    if (show_info):
-        # dataLabelDistribution(X_train, Y_train)
-        dataBoxPlot(X_train, Y_train)
     n_data_original = X_train.shape[0]
     
     # Eliminamos los outliers
-    if (remove_outliers > 0):
-        # X_train, Y_train = removeOutliers(X_train, Y_train, remove_outliers)
+    if (remove_outliers):
+        X_train, Y_train = outliersEliminationK_Neightbours(X_train, Y_train)
         n_data_without_outliers = X_train.shape[0]
         
         if (show_info):
-            dataBoxPlot(X_train, Y_train)
             print(f"Se han eliminado {n_data_original - n_data_without_outliers} outliers, el {(n_data_original - n_data_without_outliers)/n_data_original*100:.2f}%")
     
     if (reduce_dimensionality > 0):
         # Reducimos la dimensionalidad
-        # PCA = fitPCA(X_train, Y_train, 0.99)
         PCA = fitPCA(X_train, Y_train, reduce_dimensionality)
         X_train = PCA.transform(X_train)
-        
-        if (show_info):
-            dataBoxPlot(X_train, Y_train)
     
     if (normalize):
         # Normalizamos los datos
         normalize = generateNormalizer(X_train)
         X_train = normalize(X_train)
         
-        if (show_info):
-            dataBoxPlot(X_train, Y_train)
-            # dataLabelDistribution(X_train, Y_train)
         
     # Por último, utilizamos el PCA y el normalizer YA AJUSTADOS sobre los datos de test
     # De esta forma nos aseguramos que no se han visto los datos de test al ajustar
@@ -628,9 +620,14 @@ def main():
     individualsDistribution(N)
     DataInformation(X_train, Y_train)
     
+    X_train, Y_train, X_test, Y_test = preproccess(X_train, Y_train, X_test, Y_test,
+                                                   reduce_dimensionality=60)
     
+    DataInformation(X_train, Y_train)
+    
+    # Experimentamos con la dimensionalidad para obtener el valor ideal de reducción
     # ExperimentReduceDimensionality(X_train, Y_train, start=6, end=-1, interval=5)
-    ExperimentReduceDimensionality(X_train, Y_train, start=2, end=100)
+    # ExperimentReduceDimensionality(X_train, Y_train, start=2, end=100)
     
     
     
