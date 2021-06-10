@@ -28,7 +28,9 @@ from sklearn.neighbors import LocalOutlierFactor
 # Fijamos la semilla
 np.random.seed(1)
 
-##################### Plot #####################
+#------------------------------------------------------------------------#
+#------------------------------- Plot -----------------------------------#
+#------------------------------------------------------------------------#
 
 def PlotGraphic(Y, X=None, title=None, c='red' , line=2 ,axis_title=None, scale='linear'):
     if (X is not None):
@@ -103,7 +105,9 @@ def generateConfusionMatrix(X_test, Y_test, model):
     conf_matrix = plot_confusion_matrix(model, X_test, Y_test)
     plt.show()
 
-##################### Data #####################
+#------------------------------------------------------------------------#
+#------------------------------- Data -----------------------------------#
+#------------------------------------------------------------------------#
 
 #Lee un fichero y devuelve una matriz
 def readFile(filename, data_type=np.float64):
@@ -150,7 +154,9 @@ def toLabel(y):
         label[i] = np.where(y[i][:] == 1)[0]
     return label
 
-##################### Separación Training-Test #####################
+#------------------------------------------------------------------------#
+#---------------------- Separación Train-Test ---------------------------#
+#------------------------------------------------------------------------#
 
 #Separar los datos en training y test
 def splitData(X, Y, N, test_percent):
@@ -185,7 +191,9 @@ def ShuffleData(X, Y):
     Y = Y[randomize]
     return X, Y
 
-##################### Visualizar Datos #####################
+#------------------------------------------------------------------------#
+#-------------------- Información Sobre datos ---------------------------#
+#------------------------------------------------------------------------#
 
 # Muestra distintos estadísticos sobre los datos
 def DataInformation(X_train, Y_train):
@@ -285,38 +293,29 @@ def individualsDistribution(N):
     PlotBars(data, "Número de muestras por individuo")
     
 
-##################### Preprocesamiento de datos #####################
+#------------------------------------------------------------------------#
+#----------------------- Preprocesamiento -------------------------------#
+#------------------------------------------------------------------------#
 
-# Eliminamos los datos extremos
-def removeOutliers(X, Y, std_factor = 5):
-    mean = X.mean(axis = 0)
-    std = X.std(axis = 0)
-    lower = mean - std * std_factor
-    upper = mean + std * std_factor
+#Funcion para eliminar outliers usando los k-vecinos
+    # neighbors -> Para controlar el parámetro k (cuantos vecinos)
+    # ctm -> Valor de contaminacion
+def outliersEliminationK_Neightbours(X, Y ,neighbors=20 ,ctm='auto'):
     
-    mask  = np.zeros(shape=(X.shape[0]), dtype=bool)
-    for i in range(X.shape[0]):
-        is_outlier = False 
-        for j in range(X.shape[1]):
-            if (X[i, j] < lower[j] or X[i, j] > upper[j]):
-                is_outlier = True
-        mask[i] = not is_outlier
+    LOF = LocalOutlierFactor(n_neighbors=neighbors, n_jobs=-1, contamination=ctm)
+
+    # ············ Eliminar los outliers sobre los datos de entrenamiento ············#
     
-    X, Y = X[mask, :], Y[mask]
+    LOF.fit(X,Y)
+    
+    # Generamos un vector con valores mas cercanos a -1 cuanto más nos se aprpoxima el dato a la media.
+    outliers = LOF.negative_outlier_factor_
+    
+    # Eliminamos los datos que consideramos demasiado alejados (menores que -1.5) 
+    X = X[outliers > -1.5]
+    Y = Y[outliers > -1.5]
     
     return X, Y
-
-# Probamos distintos valores de varianza para eliminar valores
-def ExperimentOutliers(X, Y):
-    var_factors = [3, 4, 5, 6, 7, 8, 9, 10]
-    percentage = []
-    n_data_original = X.shape[0]
-    
-    for i in var_factors:
-        X2, Y2 = removeOutliers(X, Y, i)
-        percentage.append((n_data_original - X2.shape[0]) / n_data_original)
-    
-    PlotGraphic(X=var_factors, Y=percentage, title="Outliers removed", axis_title=("STD Factor", "Percent of data removed"))
 
 #Probaremos cómo cambia el resultadode un modelo simple según el número de parámetros
 def ExperimentReduceDimensionality(X, Y, start=1, end=-1, interval=2, clasification=True):
@@ -324,6 +323,7 @@ def ExperimentReduceDimensionality(X, Y, start=1, end=-1, interval=2, clasificat
         end = X.shape[1]
     sizes = [i for i in range(start, end, interval)]
     Ecv = []
+    X, Y = outliersEliminationK_Neightbours(X, Y)
     
     # Generamemos un modelo de regresión Logistica
     loss='log'
@@ -348,7 +348,6 @@ def ExperimentReduceDimensionality(X, Y, start=1, end=-1, interval=2, clasificat
     
     PlotGraphic(X=sizes, Y=Ecv, title="Ecv over dimension", axis_title=("Dimension", "Ecv"))
     
-
 # Generamos un normalizador con los datos de train
 def generateNormalizer(original_data):
     mean = original_data.mean(axis = 0)
@@ -371,7 +370,7 @@ def preproccess(X_train, Y_train, X_test, Y_test,
     
     # Eliminamos los outliers
     if (remove_outliers > 0):
-        X_train, Y_train = removeOutliers(X_train, Y_train, remove_outliers)
+        # X_train, Y_train = removeOutliers(X_train, Y_train, remove_outliers)
         n_data_without_outliers = X_train.shape[0]
         
         if (show_info):
@@ -405,7 +404,9 @@ def preproccess(X_train, Y_train, X_test, Y_test,
     
     return X_train, Y_train, X_test, Y_test
 
-##################### Ajuste de modelos lineales #####################
+#------------------------------------------------------------------------#
+#-------------------------- Ajuste de modelos ---------------------------#
+#------------------------------------------------------------------------#
 
 #Devuelve el modelo requerido con los parámetros dados
 def generateModel(loss, learning_rate, eta, regularizer, alpha,max_iter = 100000, 
@@ -505,7 +506,9 @@ def GetBestModel(results_list):
             best_model = result
     return best_model
 
-##################### Modelos de clasificación #####################
+#------------------------------------------------------------------------#
+#----------------------- Modelos escogidos ------------------------------#
+#------------------------------------------------------------------------#
 
 def SelectBestModelClassification(X_train, Y_train, verbose=True):
     results = []
@@ -606,62 +609,6 @@ def DefinitiveModelClassification(X_train, Y_train, X_test, Y_test, definitive_m
 
 
 
-def clasificationProblem():
-    print("Clasificación")
-    
-    # Cargamos los datos
-    X, Y = 0, 0# readDataSDD()
-    # Separamos Training y Test
-    X_train, Y_train, X_test, Y_test = \
-        splitData(X, Y, test_percent=0.2, stratify=True)
-    
-    print("Conjunto de datos originales: ")
-    print(f"Train: {X_train.shape} {Y_train.shape}")
-    print(f"Test: {X_test.shape} {Y_test.shape}")
-    
-
-    # Experimentamos con los outliers
-    # ExperimentOutliers(X_train, Y_train)
-    
-    # Experimentamos con la reducción de la dimensionalidad
-    # ExperimentReduceDimensionality(X_train, Y_train)
-    
-    X_train, Y_train, X_test, Y_test = preproccess(X_train, Y_train, X_test, Y_test,
-                                         remove_outliers=5, reduce_dimensionality=14,
-                                         normalize=True, show_info=True)
-    
-    print("Datos tras el preprocesamiento: ")
-    print(f"Train: {X_train.shape} {Y_train.shape}")
-    print(f"Test: {X_test.shape} {Y_test.shape}")
-    
-    Y_train = toLabel(Y_train)
-    Y_test = toLabel(Y_test)
-    classification_model = SelectBestModelClassification(X_train, Y_train)
-    DefinitiveModelClassification(X_train, Y_train, X_test, Y_test, classification_model)
-
-        
-
-#Funcion para eliminar outliers usando los k-vecinos
-    # neighbors -> Para controlar el parámetro k (cuantos vecinos)
-    # ctm -> Valor de contaminacion
-def outliersEliminationK_Neightbours(X, Y ,neighbors=20 ,ctm='auto'):
-    
-    LOF = LocalOutlierFactor(n_neighbors=neighbors, n_jobs=-1, contamination=ctm)
-
-    # ············ Eliminar los outliers sobre los datos de entrenamiento ············#
-    
-    LOF.fit(X,Y)
-    
-    # Generamos un vector con valores mas cercanos a -1 cuanto más nos se aprpoxima el dato a la media.
-    outliers = LOF.negative_outlier_factor_
-    
-    # Eliminamos los datos que consideramos demasiado alejados (menores que -1.5) 
-    X = X[outliers > -1.5]
-    Y = Y[outliers > -1.5]
-
-    
-    
-
 #------------------------------------------------------------------------#
 #------------------------------- MAIN -----------------------------------#
 #------------------------------------------------------------------------#
@@ -670,20 +617,18 @@ def outliersEliminationK_Neightbours(X, Y ,neighbors=20 ,ctm='auto'):
 def main():
     print("Proyecto Final")
     
-    X_all, Y_all, N = readDataHARS() 
-    
-    individualsDistribution(N)
+    X_all, Y_all, N = readDataHARS()
     X_train, Y_train, X_test, Y_test = splitData(X_all, Y_all, N, 0.3)
     
     print("Conjunto de datos originales: ")
     print(f"Train: {X_train.shape} {Y_train.shape}")
     print(f"Test: {X_test.shape} {Y_test.shape}")
     
+    individualsDistribution(N)
     DataInformation(X_train, Y_train)
     
-    # ExperimentOutliers(X_train, Y_train)
     
-    ExperimentReduceDimensionality(X_train, Y_train, start=6, end=-1)
+    # ExperimentReduceDimensionality(X_train, Y_train, start=6, end=-1, interval=5)
     ExperimentReduceDimensionality(X_train, Y_train, start=2, end=100)
     
     
