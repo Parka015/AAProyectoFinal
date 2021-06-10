@@ -101,53 +101,38 @@ def generateConfusionMatrix(X_test, Y_test, model):
     conf_matrix = plot_confusion_matrix(model, X_test, Y_test)
     plt.show()
 
-def PlotRegressionResult(Y, predictions, title=None):
-    fig, ax = plt.subplots()
-    ax.scatter(Y, predictions, s=0.5)
-    ax.plot([Y.min(), Y.max()], [Y.min(), Y.max()], 'k--', lw=2)
-    ax.set_xlabel('Real label')
-    ax.set_ylabel('Predicted')
-    if (title is not None):
-        plt.title(title)
-    plt.show()
-
 ##################### Data #####################
 
-#Cargar los datos del problema de regresión
-def readDataSDD():
-    # Leemos el fichero
-    file = 'datos/Sensorless_drive_diagnosis.txt'
-    data = np.loadtxt(file)
+#Lee un fichero y devuelve una matriz
+def readFile(filename, data_type=np.float64):
+    data = np.loadtxt(filename)
     x = []
-    y = []
     
     for i in range(0, data.shape[0]):
-        x.append(np.array([data[i][j] for j in range(data.shape[1]-1)]))
-        y.append(np.array([data[i][data.shape[1] - 1]]))
+        if (len(data.shape) == 1):
+            x.append(data[i])
+        elif (len(data.shape) == 2):
+            x.append(np.array([data[i][j] for j in range(data.shape[1])]))
     		
-    x = np.array(x, np.float64)
-    y = np.array(y, np.int)
-    y = toCategorical(y - 1, 11)
+    x = np.array(x, data_type)
     
-    return x, y
+    return x
 
-#Cargar los datos del problema
-def readDataRegression():
-    # Leemos el fichero
-    file = 'datos/train.csv'
-    data = np.loadtxt(file, delimiter=',', skiprows=1)
-    x = []
-    y = []
+#Leemos los datos del problema
+def readDataHARS():
+    X_1 = readFile('Datos/test/X_test.txt')
+    X_2 = readFile('Datos/train/X_train.txt')
+    X = np.concatenate((X_1, X_2), axis=0)
     
-    for i in range(0, data.shape[0]):
-        x.append(np.array([data[i][j] for j in range(data.shape[1]-1)]))
-        y.append(np.array([data[i][data.shape[1] - 1]]))
-    		
-    x = np.array(x, np.float64)
-    y = np.array(y, np.float64)
+    Y_1 = readFile('Datos/test/Y_test.txt', np.int)
+    Y_2 = readFile('Datos/train/Y_train.txt', np.int)
+    Y = np.concatenate((Y_1, Y_2), axis=0)
     
-    return x, y
-
+    N_1 = readFile('Datos/test/subject_test.txt', np.int)
+    N_2 = readFile('Datos/train/subject_train.txt', np.int)
+    N = np.concatenate((N_1, N_2), axis=0)
+    
+    return X, Y, N
 
 # Devuelve una matriz categorical para las etiquetas
 def toCategorical(y, n_classes):
@@ -236,7 +221,16 @@ def dataBoxPlot(X, Y):
     print(df_describe.describe())
     
     PlotBoxPlot(X, "Data Box-Plot")
-    
+
+# Muestra un gráfico con el número de muestras de cada individuo
+def dataLabelDistribution(N):
+    #Contamos el número de muestras de cada etiqueta
+    labels = N
+    data = []
+    unique, counts = np.unique(labels, return_counts=True)
+    for val, count in zip(unique, counts):
+        data.append([f"{val}", count])
+    PlotBars(data, "Número de muestras por individuo")
     
 
 ##################### Preprocesamiento de datos #####################
@@ -393,11 +387,8 @@ def linearModelCrossValidation(name, X_train, Y_train, loss, learning_rate, poly
                                regularization_list, alpha_list, max_iter = 100000, 
                                seed = 1, verbose=True):
     
-    # La función de scoring según si es regresión o clasificación
-    if (loss=='squared_loss' or learning_rate=='SVR'):
-        scoring = 'neg_mean_squared_error'
-    else:
-        scoring = 'accuracy'
+    # La función de scoring de clasificación
+    scoring = 'accuracy'
     
     # Realizamos las transformaciones polinomiales necesarias
     poly  = PolynomialFeatures(degree=polynomial_degree, include_bias=False)
@@ -576,7 +567,7 @@ def clasificationProblem():
     print("Clasificación")
     
     # Cargamos los datos
-    X, Y = readDataSDD()
+    X, Y = 0, 0# readDataSDD()
     # Separamos Training y Test
     X_train, Y_train, X_test, Y_test = \
         splitData(X, Y, test_percent=0.2, stratify=True)
@@ -605,13 +596,14 @@ def clasificationProblem():
     classification_model = SelectBestModelClassification(X_train, Y_train)
     DefinitiveModelClassification(X_train, Y_train, X_test, Y_test, classification_model)
 
+
 ##################### Main #####################
 
 def main():
-    print("Práctica 3 - Alejandro Pinel Martínez")
+    print("Proyecto Final")
     
-    clasificationProblem()
-    regressionProblem()
+    X, Y, N = readDataHARS()
+    dataLabelDistribution(N)
     
     
     
