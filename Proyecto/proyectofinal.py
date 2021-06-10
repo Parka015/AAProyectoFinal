@@ -284,7 +284,7 @@ def ExperimentReduceDimensionality(X, Y, start=6, interval=2, clasification=True
     # Generamemos un modelo de regresión Logistica o de regresión
     if (clasification):
         loss='log'
-        Y = toLabel(Y)
+        # Y = toLabel(Y)
     else:
         loss='squared_loss'
         Y = np.ravel(Y)
@@ -651,6 +651,9 @@ def main():
     
     dataLabelDistribution(X_train, Y_train)
     
+    ExperimentOutliers(X_train, Y_train)
+    
+    ExperimentReduceDimensionality(X_train, Y_train)
     
     
     
