@@ -2,7 +2,7 @@
 """
 PROYECTO FINAL
 Alejandro Pinel Martínez
-Pablo Ruiz
+Pablo Ruiz Mingorance
 """
 import numpy as np
 import pandas as pd
