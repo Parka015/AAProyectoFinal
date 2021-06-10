@@ -28,11 +28,11 @@ np.random.seed(1)
 
 ##################### Plot #####################
 
-def PlotGraphic(Y, X=None, title=None, axis_title=None, scale='linear'):
+def PlotGraphic(Y, X=None, title=None, c='red' , line=2 ,axis_title=None, scale='linear'):
     if (X is not None):
-        plt.plot(X, Y)
+        plt.plot(X, Y, c=c , linewidth=line)
     else:
-        plt.plot(Y)
+        plt.plot(Y, c=c , linewidth=line)
         
     plt.yscale(scale)
     if (axis_title != None):
@@ -604,15 +604,51 @@ def clasificationProblem():
     classification_model = SelectBestModelClassification(X_train, Y_train)
     DefinitiveModelClassification(X_train, Y_train, X_test, Y_test, classification_model)
 
+#Funcion para mostrar una gráfica sobre un parámetro estadistico
+    # par_estad -> Sirve para especificar que parámetro estadistico mostrar (mean|var|max|min|std)
+    # axis -> Sirve para especificar si se calculará por columnas (axis=0) o por filas (axis=1)
+def mostrarPlotEstadistica( X, par_estad='mean' , axis=0, title=None, c='red' , line=2 ,axis_title=None , scale='linear' ):
+    
+    numeros = np.arange(X[0].size)
+    
+    if par_estad == 'mean':
+        media = X.mean(axis)
+        PlotGraphic(media, title=title, c=c , line=line ,axis_title=axis_title, scale=scale)
+        
+    elif par_estad == 'var':    #Varianza
+        varianza = X.var(axis)
+        PlotGraphic(varianza, title=title, c=c , line=line ,axis_title=axis_title, scale=scale)
+        
+    elif par_estad == 'max':
+        maximo = X.max(axis)
+        PlotGraphic(maximo, title=title, c=c , line=line ,axis_title=axis_title, scale=scale)
+    
+    elif par_estad == 'min':
+        minimo = X.min(axis)
+        PlotGraphic(minimo, title=title, c=c , line=line ,axis_title=axis_title, scale=scale)
+        
+    elif par_estad == 'std':    #Desviacion estandar 
+        std = X.std(axis)
+        PlotGraphic(std, title=title, c=c , line=line ,axis_title=axis_title, scale=scale)
+        
+    
+    
 
-##################### Main #####################
+#------------------------------------------------------------------------#
+#------------------------------- MAIN -----------------------------------#
+#------------------------------------------------------------------------#
+
 
 def main():
     print("Proyecto Final")
     
-    X_all, Y_all, N = readDataHARS()
+    X_all, Y_all, N = readDataHARS() 
+    
     individualsDistribution(N)
     X_train, Y_train, X_test, Y_test = splitData(X_all, Y_all, N, 0.3)
+    
+    mostrarPlotEstadistica( X_train, par_estad='mean' )
+    
     dataLabelDistribution(X_train, Y_train)
     
     ExperimentOutliers(X_train, Y_train)
