@@ -22,7 +22,8 @@ from sklearn.model_selection import cross_validate
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.metrics import plot_confusion_matrix, mean_squared_error
 from sklearn.svm import LinearSVR
-
+from sklearn.model_selection import GridSearchCV
+from sklearn.base import clone
 from sklearn.neighbors import LocalOutlierFactor
 
 # Fijamos la semilla
@@ -333,10 +334,9 @@ def ExperimentReduceDimensionality(X, Y, start=1, end=-1, interval=2, clasificat
     # Generamemos un modelo de regresión Logistica
     loss='log'
     learning_rate='adaptive'
-    eta_list = [0.01]
-    regularization_list = ['None']
-    alpha_list = [0.0001]
-    polynomial_degree = 1
+    eta = 0.01
+    regularization = 'None'
+    alpha = 0.0001
     
     for i in sizes:
         # Reducimos la dimensionalidad a lo necesario
@@ -347,8 +347,20 @@ def ExperimentReduceDimensionality(X, Y, start=1, end=-1, interval=2, clasificat
         X_i = normalize(X_i)
         
         #Entrenamos un modelo y nos quedamos con su error de validación
-        results = linearModelCrossValidation("Linear Regression", X_i, Y, loss, learning_rate, polynomial_degree, eta_list, regularization_list, alpha_list, verbose=True)
-        
+        model   = SGDClassifier(loss=loss, 
+                        learning_rate=learning_rate,
+                        eta0 = eta, 
+                        penalty=regularization, 
+                        alpha = alpha, 
+                        max_iter = 100000,
+                        shuffle=True, 
+                        fit_intercept=True, 
+                        n_jobs=-1)
+        results = cross_validate(model, X_i, Y, 
+                                         scoring='balanced_accuracy',
+                                         cv=5,       
+                                         return_train_score=True,
+                                          n_jobs=-1)
         Ecv.append(results[1])
     
     PlotGraphic(X=sizes, Y=Ecv, title="Ecv over dimension", axis_title=("Dimension", "Ecv"))
@@ -405,96 +417,31 @@ def fitPreproccesser(X_train, Y_train, remove_outliers=True, reduce_dimensionali
 #-------------------------- Ajuste de modelos ---------------------------#
 #------------------------------------------------------------------------#
 
-#Devuelve el modelo requerido con los parámetros dados
-def generateModel(loss, learning_rate, eta, regularizer, alpha,max_iter = 100000, 
-                               seed = 1):
-    # Creamos modelo con los parámetros adecuados
-    # CLASIFICACION
-    model   = SGDClassifier(loss=loss, 
-                        learning_rate=learning_rate,
-                        eta0 = eta, 
-                        penalty=regularizer, 
-                        alpha = alpha, 
-                        max_iter = max_iter,
-                        shuffle=True, 
-                        fit_intercept=True, 
-                        random_state = seed,
-                        n_jobs=-1)
-    return model
-
-# Realiza una selección de parámetros de un modelo lineal de clasificación usando cross-validation
-# Devuelve una lista con el mejor modelo, mejores parámetros y sus resultados
-def linearModelCrossValidation(name, X_train, Y_train, loss, learning_rate, polynomial_degree, eta_list, 
-                               regularization_list, alpha_list, max_iter = 100000, 
-                               seed = 1, verbose=True):
+def gridSearchCV(name, X_train, Y_train, model, parameters, preprocesser, scoring='balanced_accuracy'):
+    # Preprocesamos los datos
+    X_train, Y_train = preprocesser(X_train, Y_train, is_test=False)
     
-    # La función de scoring de clasificación
-    scoring = 'balanced_accuracy'
+    print (f"\n{name}: Training set {X_train.shape}")
     
-    # Realizamos las transformaciones polinomiales necesarias
-    poly  = PolynomialFeatures(degree=polynomial_degree, include_bias=False)
-    X_train = poly.fit_transform(X_train)
+    # Generamos una grid search
+    clf = GridSearchCV(model, parameters, cv=5, n_jobs=-1, pre_dispatch=4, refit=True, verbose=4)
+    # Ajustamos el modelo
+    clf.fit(X_train, Y_train)
     
-    if (verbose):
-        print (f"\n{name}: Training set {X_train.shape}")
+    
+    print(f"{name} - parámetros ->{clf.best_params_}")
+    print(f"Ecv: {clf.best_score_}")
     
     # En esta lista guardaremos el mejor modelo = 
-    # [nombre, accuracy_cv, accuracy_train, copy of the model, parameters]
-    best_model = ["", -1e6, 0, 0, []]
+    # [nombre, accuracy_cv, copy of the model, parameters]
+    return [name, clf.best_score_, clone(clf.best_estimator_), clf.best_params_, preprocesser]
     
-    for regularizer in regularization_list:
-        for eta in eta_list:
-            for alpha in alpha_list:
-                # Creamos modelo con los parámetros adecuados
-                model = generateModel(loss, learning_rate, eta, regularizer, alpha, max_iter, seed)
-                
-                # Calculamos resultados con 5-Fold Cross Validation
-                results = cross_validate(model, X_train, Y_train, 
-                                         scoring=scoring,
-                                         cv=5,       
-                                         return_train_score=True,
-                                          n_jobs=-1
-                                         )
-                
-                parameters = [loss, learning_rate, polynomial_degree, eta, regularizer, alpha]
-                
-                # Vamos guardando el mejor modelo
-                if(results['test_score'].mean() > best_model[1]):
-                    best_model[0] = name
-                    best_model[1] = results['test_score'].mean()
-                    best_model[2] = results['train_score'].mean()
-                    best_model[3] = model
-                    best_model[4] = parameters
-                    
-                        
-                if (verbose):
-                    print (f"Resultados {parameters}: Ein {results['train_score'].mean()} Ecv: {results['test_score'].mean()}")
-                
-                #Si estamos probando sin regularización, no tiene sentido probar los alphas, solo probamos una vez
-                if (regularizer == 'None'):
-                    break
-    if (verbose):
-        print(f"Mejores parámetros para {name}: {best_model[4]}")
-        print(f"Ecv: {best_model[1]} Ein {best_model[2]}")
-    
-    return best_model
 
-def linearModelTrain(name, X_train, Y_train, loss, learning_rate, polynomial_degree, eta, 
-                               regularizer, alpha, max_iter = 100000, 
-                               seed = 1):
-    
-    # Realizamos las transformaciones polinomiales necesarias
-    poly  = PolynomialFeatures(degree=polynomial_degree, include_bias=False)
-    X_train = poly.fit_transform(X_train)
-    
-    # Creamos modelo con los parámetros adecuados
-    model = generateModel(loss, learning_rate, eta, regularizer, alpha, max_iter, seed)
-    
-    # Ajustamos el modelo con todos los datos
-    results = model.fit(X_train, Y_train)
-    
-    return model
-    
+
+#------------------------------------------------------------------------#
+#----------------------- Modelos escogidos ------------------------------#
+#------------------------------------------------------------------------#
+
 # Simplemente devuelve el mejor modelo de una lista de resultados
 def GetBestModel(results_list):
     best_model = results_list[0]
@@ -503,98 +450,52 @@ def GetBestModel(results_list):
             best_model = result
     return best_model
 
-#------------------------------------------------------------------------#
-#----------------------- Modelos escogidos ------------------------------#
-#------------------------------------------------------------------------#
-
-def SelectBestModelClassification(X_train, Y_train, verbose=True):
+def SelectBestModel(X_train, Y_train, verbose=True):
     results = []
     max_iter = 100000
     
+    preprocessador1 = fitPreproccesser(X_train, Y_train, reduce_dimensionality=60)
+    # preprocessador2 = fitPreproccesser(X_train, Y_train, reduce_dimensionality=0)
+    
     ################### Regresión Logística ###################
     
-    # Estamos usando regresión logística, luego la función de perdida será la logística
-    loss='log'
-    learning_rate = 'adaptive'
+    parameters = {'max_iter':[100000], 
+                  'loss':['log'],
+                  'learning_rate':['adaptive'],
+                  'penalty':['l1', 'l2'],
+                  'alpha':[0, 0.001, 0.0001, 0.00001],
+                  'eta0':[0.1, 0.01, 0.001],
+                  }
     
-    # Parámetros que probaremos
-    eta_list = [0.1, 0.01, 0.001]
-    regularization_list = ['None', 'l1', 'l2']
-    alpha_list = [0.001, 0.0001, 0.00001]
+    model = SGDClassifier()
     
-    #Versión sin transformaciones
-    polynomial_degree = 1
-    results.append(linearModelCrossValidation("Logistic Regression", X_train, Y_train, loss, learning_rate, polynomial_degree, eta_list, regularization_list, alpha_list, max_iter=max_iter))
-    
-    #Versión con transformaciones polinomicas
-    polynomial_degree = 2
-    results.append(linearModelCrossValidation("Logistic Regression Polynomical Transformation", X_train, Y_train, loss, learning_rate, polynomial_degree, eta_list, regularization_list, alpha_list, max_iter=max_iter))
-    
-    ################### Perceptron ###################
-    
-    # Estamos usando perceptron, usamos su función de pérdida
-    loss='perceptron'
-    learning_rate = 'constant'
-    
-    # Parámetros que probaremos
-    eta_list = [1]
-    regularization_list = ['None']
-    alpha_list = [0]
-    
-    #Versión sin transformaciones
-    polynomial_degree = 1
-    results.append(linearModelCrossValidation("Perceptron", X_train, Y_train, loss, learning_rate, polynomial_degree, eta_list, regularization_list, alpha_list, max_iter=max_iter))
-    
-    #Versión con transformaciones polinomicas
-    polynomial_degree = 2
-    results.append(linearModelCrossValidation("Perceptron  Polynomical Transformation", X_train, Y_train, loss, learning_rate, polynomial_degree, eta_list, regularization_list, alpha_list, max_iter=max_iter))
-    
-    ################### SVM ###################
-    
-    # Estamos usando SVM, usamos su función de pérdida
-    loss='hinge'
-    learning_rate = 'adaptive'
-    
-    # Parámetros que probaremos
-    eta_list = [0.1, 0.01, 0.001]
-    regularization_list = ['None', 'l1', 'l2']
-    alpha_list = [0.001, 0.0001, 0.00001]
-    
-    #Versión sin transformaciones
-    polynomial_degree = 1
-    results.append(linearModelCrossValidation("SVM", X_train, Y_train, loss, learning_rate, polynomial_degree, eta_list, regularization_list, alpha_list, max_iter=max_iter))
-    
-    #Versión con transformaciones polinomicas
-    polynomial_degree = 2
-    results.append(linearModelCrossValidation("SVM  Polynomical Transformation", X_train, Y_train, loss, learning_rate, polynomial_degree, eta_list, regularization_list, alpha_list, max_iter=max_iter))
-    
+    results.append(gridSearchCV("Regresión Logística", X_train, Y_train, model, parameters, preprocessador1))
     
     ################### Selección del mejor modelo ###################
     
     best_model = GetBestModel(results)
     
     if (verbose):
-        print(f"El mejor modelo es: {best_model[0]} con parámetros: {best_model[4]}")
-        print(f"Ein {best_model[2]} Ecv: {best_model[1]}")
+        print(f"El mejor modelo es: {best_model[0]} con parámetros: {best_model[3]}")
+        print(f"Ecv: {best_model[1]}")
     
     return best_model
 
 def DefinitiveModelClassification(X_train, Y_train, X_test, Y_test, definitive_model):
-    #Extraemos todos los parámetros
-    max_iter = 100000
-    name = definitive_model[0]
-    loss, learning_rate, polynomial_degree, eta, regularizer, alpha = definitive_model[4]
+    
+    name, Ecv, model, parameters, preprocesser = definitive_model
+    
+    #Primero, preprocesamos los datos con el preprocesser
+    X_train, Y_train = preprocesser(X_train, Y_train)
+    X_test, Y_test = preprocesser(X_test, Y_test, is_test=True)
     
     # Entrenamos a nuestro modelo definitivo
-    model = linearModelTrain(name, X_train, Y_train, loss, learning_rate, polynomial_degree, eta, regularizer, alpha, max_iter=max_iter)
+    results = model.fit(X_train, Y_train)
     
-    poly  = PolynomialFeatures(degree=polynomial_degree, include_bias=False)
-    X_train = poly.fit_transform(X_train)
     # Resultados sobre los datos de train
     train_error = model.score(X_train, Y_train)
     
     # Resultados sobre los datos de test
-    X_test = poly.fit_transform(X_test)
     test_error = model.score(X_test, Y_test)
     
     print(f"\nMODELO DEFINITIVO: {name}")
@@ -623,6 +524,17 @@ def main():
     
     individualsDistribution(N)
     DataInformation(X_train, Y_train)
+    
+    SelectBestModel(X_train, Y_train);
+    
+    
+    
+    # parameters = {'max_iter':[100000], 'solver':['newton-cg','saga'], 'penalty':['l2'] ,
+    #           'C':[1],'class_weight': ['balanced']}
+    
+    # logic_regression = LogisticRegression()
+    
+    # gridSearchCV("Regresión Logística", X_train, Y_train, logic_regression, parameters, preprocessador1)
     
     preprocessador1 = fitPreproccesser(X_train, Y_train, reduce_dimensionality=60)
     
