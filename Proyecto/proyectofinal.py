@@ -470,7 +470,7 @@ def SelectBestModel(X_train, Y_train, verbose=True):
                   }
     
     model = SGDClassifier()
-    results.append(gridSearchCV("Regresión Logística - 60", X_train, Y_train, model, parameters, preprocessador1))
+    results.append(gridSearchCV("Regresión Logística - 160", X_train, Y_train, model, parameters, preprocessador1))
     
     model = SGDClassifier()
     results.append(gridSearchCV("Regresión Logística - 561", X_train, Y_train, model, parameters, preprocessador2))
@@ -488,7 +488,7 @@ def SelectBestModel(X_train, Y_train, verbose=True):
                   }
     
     model = MLPClassifier()
-    results.append(gridSearchCV("Perceptron Multicapa - 60", X_train, Y_train, model, parameters, preprocessador1))
+    results.append(gridSearchCV("Perceptron Multicapa - 160", X_train, Y_train, model, parameters, preprocessador1))
     
     model = MLPClassifier()
     results.append(gridSearchCV("Perceptron Multicapa - 561", X_train, Y_train, model, parameters, preprocessador2))
@@ -499,7 +499,7 @@ def SelectBestModel(X_train, Y_train, verbose=True):
     best_model = GetBestModel(results)
     
     if (verbose):
-        print(f"El mejor modelo es: {best_model[0]} con parámetros: {best_model[3]}")
+        print(f"\nEl mejor modelo es: {best_model[0]} con parámetros: {best_model[3]}")
         print(f"Ecv: {best_model[1]}")
     
     return best_model
