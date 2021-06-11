@@ -364,12 +364,9 @@ def generateNormalizer(original_data):
     return normalize
 
 # Preprocesamos los datos eliminando outliers, reduciendo la dimensionalidad y normalizando
-def preproccess(X_train, Y_train, X_test, Y_test, 
-                remove_outliers=True, reduce_dimensionality=0, normalize=True, show_info=True):
+def fitPreproccesser(X_train, Y_train, remove_outliers=True, reduce_dimensionality=0, normalize=True, show_info=True):
 
     n_data_original = X_train.shape[0]
-    
-    # Eliminamos los outliers
     if (remove_outliers):
         X_train, Y_train = outliersEliminationK_Neightbours(X_train, Y_train)
         n_data_without_outliers = X_train.shape[0]
@@ -377,25 +374,32 @@ def preproccess(X_train, Y_train, X_test, Y_test,
         if (show_info):
             print(f"Se han eliminado {n_data_original - n_data_without_outliers} outliers, el {(n_data_original - n_data_without_outliers)/n_data_original*100:.2f}%")
     
+    # Ajustamos PCA
     if (reduce_dimensionality > 0):
-        # Reducimos la dimensionalidad
         PCA = fitPCA(X_train, Y_train, reduce_dimensionality)
         X_train = PCA.transform(X_train)
     
+    # Ajustamos normalizador
     if (normalize):
-        # Normalizamos los datos
-        normalize = generateNormalizer(X_train)
-        X_train = normalize(X_train)
-        
-        
-    # Por último, utilizamos el PCA y el normalizer YA AJUSTADOS sobre los datos de test
-    # De esta forma nos aseguramos que no se han visto los datos de test al ajustar
-    if (reduce_dimensionality > 0):
-        X_test = PCA.transform(X_test)
-    if (normalize):
-        X_test = normalize(X_test)
+            normalize = generateNormalizer(X_train)
     
-    return X_train, Y_train, X_test, Y_test
+    def preproccess(X, Y, is_test=False):
+        
+        # Eliminamos los outliers
+        if (remove_outliers and not is_test):
+            X, Y = outliersEliminationK_Neightbours(X, Y)
+        
+        # Reducimos dimensionalidad
+        if (reduce_dimensionality > 0):
+            X = PCA.transform(X)
+        
+        # Normalizamos los datos
+        if (normalize):
+            X = normalize(X)
+        
+        return X, Y
+    
+    return preproccess
 
 #------------------------------------------------------------------------#
 #-------------------------- Ajuste de modelos ---------------------------#
@@ -620,8 +624,10 @@ def main():
     individualsDistribution(N)
     DataInformation(X_train, Y_train)
     
-    X_train, Y_train, X_test, Y_test = preproccess(X_train, Y_train, X_test, Y_test,
-                                                   reduce_dimensionality=60)
+    preprocessador1 = fitPreproccesser(X_train, Y_train, reduce_dimensionality=60)
+    
+    X_train, Y_train = preprocessador1(X_train, Y_train)
+    X_test, Y_test = preprocessador1(X_test, Y_test, is_test=True)
     
     DataInformation(X_train, Y_train)
     
