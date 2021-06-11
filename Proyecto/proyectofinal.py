@@ -517,7 +517,7 @@ def SelectBestModel(X_train, Y_train, verbose=True):
     best_model = GetBestModel(results)
     
     if (verbose):
-        print(f"El mejor modelo es: {best_model[0]} con parámetros: {best_model[3]}")
+        print(f"\nEl mejor modelo es: {best_model[0]} con parámetros: {best_model[3]}")
         print(f"Ecv: {best_model[1]}")
     
     return best_model
