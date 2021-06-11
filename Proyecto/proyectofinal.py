@@ -25,6 +25,7 @@ from sklearn.svm import LinearSVR
 from sklearn.model_selection import GridSearchCV
 from sklearn.base import clone
 from sklearn.neighbors import LocalOutlierFactor
+from sklearn.neural_network import MLPClassifier
 
 # Fijamos la semilla
 np.random.seed(1)
@@ -429,7 +430,7 @@ def gridSearchCV(name, X_train, Y_train, model, parameters, preprocesser, scorin
     clf.fit(X_train, Y_train)
     
     
-    print(f"{name} - parámetros ->{clf.best_params_}")
+    print(f"{name} mejores parámetros:\n{clf.best_params_}")
     print(f"Ecv: {clf.best_score_}")
     
     # En esta lista guardaremos el mejor modelo = 
@@ -454,22 +455,44 @@ def SelectBestModel(X_train, Y_train, verbose=True):
     results = []
     max_iter = 100000
     
-    preprocessador1 = fitPreproccesser(X_train, Y_train, reduce_dimensionality=60)
-    # preprocessador2 = fitPreproccesser(X_train, Y_train, reduce_dimensionality=0)
+    preprocessador1 = fitPreproccesser(X_train, Y_train, reduce_dimensionality=160)
+    preprocessador2 = fitPreproccesser(X_train, Y_train, reduce_dimensionality=0)
     
     ################### Regresión Logística ###################
     
     parameters = {'max_iter':[100000], 
                   'loss':['log'],
                   'learning_rate':['adaptive'],
+                  
                   'penalty':['l1', 'l2'],
                   'alpha':[0, 0.001, 0.0001, 0.00001],
                   'eta0':[0.1, 0.01, 0.001],
                   }
     
     model = SGDClassifier()
+    results.append(gridSearchCV("Regresión Logística - 60", X_train, Y_train, model, parameters, preprocessador1))
     
-    results.append(gridSearchCV("Regresión Logística", X_train, Y_train, model, parameters, preprocessador1))
+    model = SGDClassifier()
+    results.append(gridSearchCV("Regresión Logística - 561", X_train, Y_train, model, parameters, preprocessador2))
+    
+    
+    ################### Perceptron Multicapa ###################
+    
+    parameters = {'max_iter':[100000],
+                  'learning_rate':['adaptive'],
+                  
+                  'activation':['tanh', 'relu'],
+                  'hidden_layer_sizes':[[50, 50], [100, 50], [100, 100]],
+                  'alpha':[0, 0.001, 0.0001, 0.00001],
+                  'learning_rate_init':[0.1, 0.01, 0.001],
+                  }
+    
+    model = MLPClassifier()
+    results.append(gridSearchCV("Perceptron Multicapa - 60", X_train, Y_train, model, parameters, preprocessador1))
+    
+    model = MLPClassifier()
+    results.append(gridSearchCV("Perceptron Multicapa - 561", X_train, Y_train, model, parameters, preprocessador2))
+    
     
     ################### Selección del mejor modelo ###################
     
@@ -481,7 +504,7 @@ def SelectBestModel(X_train, Y_train, verbose=True):
     
     return best_model
 
-def DefinitiveModelClassification(X_train, Y_train, X_test, Y_test, definitive_model):
+def DefinitiveModel(X_train, Y_train, X_test, Y_test, definitive_model):
     
     name, Ecv, model, parameters, preprocesser = definitive_model
     
@@ -528,20 +551,12 @@ def main():
     SelectBestModel(X_train, Y_train);
     
     
+    # preprocessador1 = fitPreproccesser(X_train, Y_train, reduce_dimensionality=60)
     
-    # parameters = {'max_iter':[100000], 'solver':['newton-cg','saga'], 'penalty':['l2'] ,
-    #           'C':[1],'class_weight': ['balanced']}
+    # X_train, Y_train = preprocessador1(X_train, Y_train)
+    # X_test, Y_test = preprocessador1(X_test, Y_test, is_test=True)
     
-    # logic_regression = LogisticRegression()
-    
-    # gridSearchCV("Regresión Logística", X_train, Y_train, logic_regression, parameters, preprocessador1)
-    
-    preprocessador1 = fitPreproccesser(X_train, Y_train, reduce_dimensionality=60)
-    
-    X_train, Y_train = preprocessador1(X_train, Y_train)
-    X_test, Y_test = preprocessador1(X_test, Y_test, is_test=True)
-    
-    DataInformation(X_train, Y_train)
+    # DataInformation(X_train, Y_train)
     
     # Experimentamos con la dimensionalidad para obtener el valor ideal de reducción
     # ExperimentReduceDimensionality(X_train, Y_train, start=6, end=-1, interval=5)
