@@ -307,7 +307,7 @@ def individualsDistribution(N):
     # ctm -> Valor de contaminacion
 def outliersEliminationK_Neightbours(X, Y ,neighbors=20 ,ctm='auto'):
     
-    LOF = LocalOutlierFactor(n_neighbors=neighbors, n_jobs=-1, contamination=ctm)
+    LOF = LocalOutlierFactor(n_neighbors=neighbors, n_jobs=-1, metric='manhattan' ,contamination=ctm)
 
     # ············ Eliminar los outliers sobre los datos de entrenamiento ············#
     
