@@ -26,6 +26,7 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.base import clone
 from sklearn.neighbors import LocalOutlierFactor
 from sklearn.neural_network import MLPClassifier
+from sklearn.svm import SVC
 
 # Fijamos la semilla
 np.random.seed(1)
@@ -470,7 +471,7 @@ def SelectBestModel(X_train, Y_train, verbose=True):
                   }
     
     model = SGDClassifier()
-    results.append(gridSearchCV("Regresión Logística - 60", X_train, Y_train, model, parameters, preprocessador1))
+    results.append(gridSearchCV("Regresión Logística - 160", X_train, Y_train, model, parameters, preprocessador1))
     
     model = SGDClassifier()
     results.append(gridSearchCV("Regresión Logística - 561", X_train, Y_train, model, parameters, preprocessador2))
@@ -488,10 +489,27 @@ def SelectBestModel(X_train, Y_train, verbose=True):
                   }
     
     model = MLPClassifier()
-    results.append(gridSearchCV("Perceptron Multicapa - 60", X_train, Y_train, model, parameters, preprocessador1))
+    results.append(gridSearchCV("Perceptron Multicapa - 160", X_train, Y_train, model, parameters, preprocessador1))
     
     model = MLPClassifier()
     results.append(gridSearchCV("Perceptron Multicapa - 561", X_train, Y_train, model, parameters, preprocessador2))
+    
+    
+    ########################  SVM  ########################
+    
+    parameters = {'max_iter':[-1],
+                  'cache_size':[200, 400],
+                  'class_weight': ['balanced'],
+                  'kernel':['poly'],
+                  'degree':[2, 3, 4, 5 ],
+                  'C':[10, 1, 10, 100, 1000, 10000, 100000]                
+                  }
+    
+    model = SVC()
+    results.append(gridSearchCV("SVC - 160", X_train, Y_train, model, parameters, preprocessador1))
+    
+    model = SVC()
+    results.append(gridSearchCV("SVC - 561", X_train, Y_train, model, parameters, preprocessador2))
     
     
     ################### Selección del mejor modelo ###################
