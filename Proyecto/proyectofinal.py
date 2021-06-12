@@ -14,7 +14,7 @@ from sklearn.decomposition import PCA
 from sklearn.linear_model import SGDClassifier
 from sklearn.model_selection import cross_validate
 from sklearn.preprocessing import PolynomialFeatures
-from sklearn.metrics import plot_confusion_matrix, mean_squared_error
+from sklearn.metrics import plot_confusion_matrix, balanced_accuracy_score
 from sklearn.svm import LinearSVR
 from sklearn.model_selection import GridSearchCV
 from sklearn.base import clone
@@ -22,6 +22,8 @@ from sklearn.neighbors import LocalOutlierFactor
 from sklearn.neural_network import MLPClassifier
 from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
+import time
+from statistics import mean
 
 # Fijamos la semilla
 np.random.seed(1)
@@ -175,23 +177,28 @@ def splitData(X, Y, N, test_percent):
     
     X_test = X[mask]
     Y_test = Y[mask]
+    N_test = N[mask]
     X_train = X[~mask]
     Y_train = Y[~mask]
+    N_train = N[~mask]
     
     #Permutamos los datos para que estén 
-    X_train, Y_train = ShuffleData(X_train, Y_train)
-    X_test, Y_test = ShuffleData(X_test, Y_test)
+    X_train, Y_train, N_train = ShuffleData(X_train, Y_train, N_train)
+    X_test, Y_test, N_test = ShuffleData(X_test, Y_test, N_test)
     
     # print (f"Train: {X_train.shape} {Y_train.shape}")
     # print (f"Test: {X_test.shape} {Y_test.shape}")
     
-    return X_train, Y_train, X_test, Y_test
+    return X_train, Y_train, N_train, X_test, Y_test, N_test
 
-def ShuffleData(X, Y):
+def ShuffleData(X, Y, N=None):
     randomize = np.arange(len(X))
     np.random.shuffle(randomize)
     X = X[randomize]
     Y = Y[randomize]
+    if (N is not None):
+        N = N[randomize]
+        return X, Y, N
     return X, Y
 
 #------------------------------------------------------------------------#
@@ -303,7 +310,7 @@ def individualsDistribution(N):
 #Funcion para eliminar outliers usando los k-vecinos
     # neighbors -> Para controlar el parámetro k (cuantos vecinos)
     # ctm -> Valor de contaminacion
-def outliersEliminationK_Neightbours(X, Y ,neighbors=20 ,ctm='auto'):
+def outliersEliminationK_Neightbours(X, Y, N, neighbors=20 ,ctm='auto'):
     
     LOF = LocalOutlierFactor(n_neighbors=neighbors, n_jobs=-1, metric='manhattan' ,contamination=ctm)
 
@@ -317,16 +324,17 @@ def outliersEliminationK_Neightbours(X, Y ,neighbors=20 ,ctm='auto'):
     # Eliminamos los datos que consideramos demasiado alejados (menores que -1.5) 
     X = X[outliers > -1.5]
     Y = Y[outliers > -1.5]
+    N = N[outliers > -1.5]
     
-    return X, Y
+    return X, Y, N
 
 #Probaremos cómo cambia el resultadode un modelo simple según el número de parámetros
-def ExperimentReduceDimensionality(X, Y, start=1, end=-1, interval=2, clasification=True):
+def ExperimentReduceDimensionality(X, Y, N, start=1, end=-1, interval=2, clasification=True):
     if (end == -1):
         end = X.shape[1]
     sizes = [i for i in range(start, end, interval)]
     Ecv = []
-    X, Y = outliersEliminationK_Neightbours(X, Y)
+    X, Y, N = outliersEliminationK_Neightbours(X, Y, N)
     
     # Generamemos un modelo de regresión Logistica
     loss='log'
@@ -353,12 +361,11 @@ def ExperimentReduceDimensionality(X, Y, start=1, end=-1, interval=2, clasificat
                         shuffle=True, 
                         fit_intercept=True, 
                         n_jobs=-1)
-        results = cross_validate(model, X_i, Y, 
-                                         scoring='balanced_accuracy',
-                                         cv=5,       
-                                         return_train_score=True,
-                                          n_jobs=-1)
-        Ecv.append(results[1])
+        
+        print(f"Experimento: dimensión {i}")
+        results = crossValidationIndividuals(X_i, Y, N, model, verbose=1)
+        
+        Ecv.append(results[0])
     
     PlotGraphic(X=sizes, Y=Ecv, title="Ecv over dimension", axis_title=("Dimension", "Ecv"))
     
@@ -373,11 +380,11 @@ def generateNormalizer(original_data):
     return normalize
 
 # Preprocesamos los datos eliminando outliers, reduciendo la dimensionalidad y normalizando
-def fitPreproccesser(X_train, Y_train, remove_outliers=True, reduce_dimensionality=0, normalize=True, show_info=True):
+def fitPreproccesser(X_train, Y_train, N_train, remove_outliers=True, reduce_dimensionality=0, normalize=True, show_info=True):
 
     n_data_original = X_train.shape[0]
     if (remove_outliers):
-        X_train, Y_train = outliersEliminationK_Neightbours(X_train, Y_train)
+        X_train, Y_train = outliersEliminationK_Neightbours(X_train, Y_train, N_train)
         n_data_without_outliers = X_train.shape[0]
         
         if (show_info):
@@ -413,6 +420,78 @@ def fitPreproccesser(X_train, Y_train, remove_outliers=True, reduce_dimensionali
 #------------------------------------------------------------------------#
 #-------------------------- Ajuste de modelos ---------------------------#
 #------------------------------------------------------------------------#
+
+#Debido a las caracter
+def crossValidationIndividuals(X, Y, N, model, cv=5, verbose=0):
+    # Primero, dividimos los datos en K folds 
+    # SEPARANDO POR INDIVIDUOS
+    X_fold = []
+    Y_fold = []
+    
+    individuals = np.unique(N)
+    np.random.shuffle(individuals)
+    N_fold = np.array_split(individuals, cv)
+    
+    for fold in range(len(N_fold)):
+        mask = np.zeros_like(N, dtype=bool)
+        for i in range(N.shape[0]):
+            if (N[i]-1 in N_fold[fold]):
+                mask[i] = True
+            else:
+                mask[i] = False
+                
+        X_fold.append(X[mask])
+        Y_fold.append(Y[mask])
+    
+    ecv = []
+    ein = []
+    times = []
+    
+    # Ahora entrenamos con k-1 de los folds
+    for fold in range(len(N_fold)):
+        
+        # Unimos todos los folds menos uno
+        X_i = None
+        Y_i = None
+        for i in range(len(N_fold)):
+            if (fold != i):
+                if (X_i is None):
+                    X_i = X_fold[i]
+                    Y_i = Y_fold[i]
+                else:
+                    X_i = np.concatenate((X_i, X_fold[i]), axis=0)
+                    Y_i = np.concatenate((Y_i, Y_fold[i]), axis=0)
+        
+        model = clone(model)
+        
+        start_time = time.time()
+        
+        #Ahora entrenamos con los datos
+        model.fit(X_i, Y_i)
+        
+        end_time = time.time()
+        seconds = end_time - start_time
+        times.append(seconds)
+        
+        # Resultados sobre los datos de train
+        train_predict = model.predict(X_i)
+        train_error = balanced_accuracy_score(Y_i, train_predict)
+        ein.append(train_error)
+        
+        # Resultados sobre los datos de validación
+        val_predict = model.predict(X_fold[fold])
+        val_error = balanced_accuracy_score(Y_fold[fold], val_predict)
+        ecv.append(val_error)
+        
+        if (verbose >= 2):
+            print(f"Fold {fold} Training {X_i.shape} Validation {X_fold[fold].shape}")
+            print(f"Ecv {val_error} Ein {train_error} Tiempo {seconds}")
+    
+    if (verbose >= 1):
+        print(f"Ecv {mean(ecv)} Ein {mean(ein)} Tiempo {mean(times)}")
+    
+    return mean(ecv), mean(ein), mean(times)
+
 
 def ShowCVResults(name, results):
     index = np.argmax(results.cv_results_['mean_test_score'])
@@ -471,10 +550,10 @@ def SelectBestModel(X_train, Y_train, verbose=True):
                   }
     
     model = SGDClassifier()
-    results.append(gridSearchCV("Regresión Logística - 160", X_train, Y_train, model, parameters, preprocessador1))
+    # results.append(gridSearchCV("Regresión Logística - 160", X_train, Y_train, model, parameters, preprocessador1))
     
     model = SGDClassifier()
-    results.append(gridSearchCV("Regresión Logística - 561", X_train, Y_train, model, parameters, preprocessador2))
+    # results.append(gridSearchCV("Regresión Logística - 561", X_train, Y_train, model, parameters, preprocessador2))
 
     ########################  SVM  ########################
     
@@ -486,10 +565,10 @@ def SelectBestModel(X_train, Y_train, verbose=True):
                   'C':[10, 1, 10, 100, 1000, 10000, 100000]}
     
     model = SVC()
-    results.append(gridSearchCV("SVC - 160", X_train, Y_train, model, parameters, preprocessador1))
+    # results.append(gridSearchCV("SVC - 160", X_train, Y_train, model, parameters, preprocessador1))
     
     model = SVC()
-    results.append(gridSearchCV("SVC - 561", X_train, Y_train, model, parameters, preprocessador2))
+    # results.append(gridSearchCV("SVC - 561", X_train, Y_train, model, parameters, preprocessador2))
     
     
     ################### Perceptron Multicapa ###################
@@ -499,7 +578,7 @@ def SelectBestModel(X_train, Y_train, verbose=True):
                   
                   'activation':['tanh', 'relu'],
                   'hidden_layer_sizes':[[50, 50], [100, 50], [100, 100]],
-                  'alpha':[0, 0.001, 0.0001, 0.00001],
+                  'alpha':[0, 1, 0.1, 0.01, 0.001, 0.0001],
                   'learning_rate_init':[0.1, 0.01, 0.001],
                   }
     
@@ -526,10 +605,10 @@ def SelectBestModel(X_train, Y_train, verbose=True):
                   }
     
     model = RandomForestClassifier()
-    results.append(gridSearchCV("Random Forest - 160", X_train, Y_train, model, parameters, preprocessador1))
+    # results.append(gridSearchCV("Random Forest - 160", X_train, Y_train, model, parameters, preprocessador1))
     
     model = RandomForestClassifier()
-    results.append(gridSearchCV("Random Forest - 561", X_train, Y_train, model, parameters, preprocessador2))
+    # results.append(gridSearchCV("Random Forest - 561", X_train, Y_train, model, parameters, preprocessador2))
     
     
     ################### Selección del mejor modelo ###################
@@ -542,9 +621,7 @@ def SelectBestModel(X_train, Y_train, verbose=True):
     
     return best_model
 
-def DefinitiveModel(X_train, Y_train, X_test, Y_test, definitive_model):
-    
-    name, Ecv, model, parameters, preprocesser = definitive_model
+def TrainTestDefinitiveModel(X_train, Y_train, X_test, Y_test, model, name, preprocesser):
     
     #Primero, preprocesamos los datos con el preprocesser
     X_train, Y_train = preprocesser(X_train, Y_train)
@@ -554,10 +631,14 @@ def DefinitiveModel(X_train, Y_train, X_test, Y_test, definitive_model):
     results = model.fit(X_train, Y_train)
     
     # Resultados sobre los datos de train
-    train_error = model.score(X_train, Y_train)
+    train_predict = model.predict(X_train)
+    train_error = balanced_accuracy_score(Y_train, train_predict)
+    # train_error = model.score(X_train, Y_train)
     
     # Resultados sobre los datos de test
-    test_error = model.score(X_test, Y_test)
+    test_predict = model.predict(X_test)
+    test_error = balanced_accuracy_score(Y_test, test_predict)
+    # test_error = model.score(X_test, Y_test)
     
     print(f"\nMODELO DEFINITIVO: {name}")
     print(f"Ein: {train_error}")
@@ -565,7 +646,6 @@ def DefinitiveModel(X_train, Y_train, X_test, Y_test, definitive_model):
     
     #Imprimimos la matriz de confusión
     generateConfusionMatrix(X_test, Y_test, model)
-
 
 
 #------------------------------------------------------------------------#
@@ -577,29 +657,58 @@ def main():
     print("Proyecto Final")
     
     X_all, Y_all, N = readDataHARS()
-    X_train, Y_train, X_test, Y_test = splitData(X_all, Y_all, N, 0.3)
-    
+    X_train, Y_train, N_train, X_test, Y_test, N_test = splitData(X_all, Y_all, N, 0.3)
     print("Conjunto de datos originales: ")
     print(f"Train: {X_train.shape} {Y_train.shape}")
     print(f"Test: {X_test.shape} {Y_test.shape}")
     
+    loss='log'
+    learning_rate='adaptive'
+    eta = 0.01
+    regularization = 'None'
+    alpha = 0.0001
+    model   = SGDClassifier(loss=loss, 
+                        learning_rate=learning_rate,
+                        eta0 = eta, 
+                        penalty=regularization, 
+                        alpha = alpha, 
+                        max_iter = 100000,
+                        shuffle=True, 
+                        fit_intercept=True, 
+                        n_jobs=-1)
+    
+    crossValidationIndividuals(X_train, Y_train, N_train, model, cv=5, verbose=2)
+    
+    ExperimentReduceDimensionality(X_train, Y_train, N_train, start=5, end=-1, interval=10)
+    ExperimentReduceDimensionality(X_train, Y_train, N_train, start=2, end=100)
+    
+    return 0
+    
+    
+    
     individualsDistribution(N)
     DataInformation(X_train, Y_train)
     
+    # Seleccionamos los mejores parámetros con grid search y cross validation
+    # y nos quedamos con la mejor hipótesis
     SelectBestModel(X_train, Y_train);
     
     
-    # preprocessador1 = fitPreproccesser(X_train, Y_train, reduce_dimensionality=160)
+    preprocessador1 = fitPreproccesser(X_train, Y_train, N_train, reduce_dimensionality=160)
     
-    # X_train, Y_train = preprocessador1(X_train, Y_train)
-    # X_test, Y_test = preprocessador1(X_test, Y_test, is_test=True)
-    
-    # DataInformation(X_train, Y_train)
+    X_train_preprocessed, Y_train_preprocessed = preprocessador1(X_train, Y_train)
+    DataInformation(X_train_preprocessed, Y_train_preprocessed)
     
     # Experimentamos con la dimensionalidad para obtener el valor ideal de reducción
-    # ExperimentReduceDimensionality(X_train, Y_train, start=6, end=-1, interval=5)
-    # ExperimentReduceDimensionality(X_train, Y_train, start=2, end=100)
+    # ExperimentReduceDimensionality(X_train, Y_train, N_train, start=6, end=-1, interval=5)
+    # ExperimentReduceDimensionality(X_train, Y_train, N_train, start=2, end=100)
     
+    # La experimentación nos ha mostrado que la mejor hipótesis es el MLP
+    best_hypotesis = MLPClassifier(max_iter=100000, learning_rate='adaptive',
+                                   activation='tanh', hidden_layer_sizes=[100, 50],
+                                   learning_rate_init=0.01, alpha=0.001)
+
+    # TrainTestDefinitiveModel(X_train, Y_train, X_test, Y_test, best_hypotesis, "Perceptron Multicapa - 160", preprocessador1)
     
     
     
