@@ -7,17 +7,11 @@ Pablo Ruiz Mingorance
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import sys
-import sklearn as skl
-from sklearn.model_selection import train_test_split
 from sklearn.manifold import TSNE
-from sklearn.linear_model import Perceptron
-from sklearn.metrics import accuracy_score
-from sklearn import preprocessing
 from sklearn.neighbors import LocalOutlierFactor
 from sklearn.linear_model import LogisticRegression
 from sklearn.decomposition import PCA
-from sklearn.linear_model import SGDClassifier, SGDRegressor
+from sklearn.linear_model import SGDClassifier
 from sklearn.model_selection import cross_validate
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.metrics import plot_confusion_matrix, mean_squared_error
@@ -27,6 +21,7 @@ from sklearn.base import clone
 from sklearn.neighbors import LocalOutlierFactor
 from sklearn.neural_network import MLPClassifier
 from sklearn.svm import SVC
+from sklearn.ensemble import RandomForestClassifier
 
 # Fijamos la semilla
 np.random.seed(1)
@@ -419,6 +414,13 @@ def fitPreproccesser(X_train, Y_train, remove_outliers=True, reduce_dimensionali
 #-------------------------- Ajuste de modelos ---------------------------#
 #------------------------------------------------------------------------#
 
+def ShowCVResults(name, results):
+    index = np.argmax(results.cv_results_['mean_test_score'])
+    
+    print(f"{name} mejores parámetros:\n{results.best_params_}")
+    print(f"Ecv: {results.best_score_} Ein: {results.cv_results_['mean_train_score'][index]}")
+    print(f"Tiempo: {results.cv_results_['mean_fit_time'][index]} seg")
+
 def gridSearchCV(name, X_train, Y_train, model, parameters, preprocesser, scoring='balanced_accuracy'):
     # Preprocesamos los datos
     X_train, Y_train = preprocesser(X_train, Y_train, is_test=False)
@@ -426,13 +428,11 @@ def gridSearchCV(name, X_train, Y_train, model, parameters, preprocesser, scorin
     print (f"\n{name}: Training set {X_train.shape}")
     
     # Generamos una grid search
-    clf = GridSearchCV(model, parameters, cv=5, n_jobs=-1, pre_dispatch=4, refit=True, verbose=4)
+    clf = GridSearchCV(model, parameters, cv=5, n_jobs=-1, pre_dispatch=4, return_train_score=True)
     # Ajustamos el modelo
     clf.fit(X_train, Y_train)
     
-    
-    print(f"{name} mejores parámetros:\n{clf.best_params_}")
-    print(f"Ecv: {clf.best_score_}")
+    ShowCVResults(name, clf)
     
     # En esta lista guardaremos el mejor modelo = 
     # [nombre, accuracy_cv, copy of the model, parameters]
@@ -471,10 +471,26 @@ def SelectBestModel(X_train, Y_train, verbose=True):
                   }
     
     model = SGDClassifier()
-    results.append(gridSearchCV("Regresión Logística - 160", X_train, Y_train, model, parameters, preprocessador1))
+    # results.append(gridSearchCV("Regresión Logística - 160", X_train, Y_train, model, parameters, preprocessador1))
     
     model = SGDClassifier()
-    results.append(gridSearchCV("Regresión Logística - 561", X_train, Y_train, model, parameters, preprocessador2))
+    # results.append(gridSearchCV("Regresión Logística - 561", X_train, Y_train, model, parameters, preprocessador2))
+    
+    ########################  SVM  ########################
+    
+    parameters = {'max_iter':[-1],
+                  'cache_size':[200, 400],
+                  'class_weight': ['balanced'],
+                  'kernel':['poly'],
+                  'degree':[2, 3, 4, 5 ],
+                  'C':[10, 1, 10, 100, 1000, 10000, 100000]                
+                  }
+    
+    model = SVC()
+    # results.append(gridSearchCV("SVC - 160", X_train, Y_train, model, parameters, preprocessador1))
+    
+    model = SVC()
+    # results.append(gridSearchCV("SVC - 561", X_train, Y_train, model, parameters, preprocessador2))
     
     
     ################### Perceptron Multicapa ###################
@@ -489,11 +505,12 @@ def SelectBestModel(X_train, Y_train, verbose=True):
                   }
     
     model = MLPClassifier()
-    results.append(gridSearchCV("Perceptron Multicapa - 160", X_train, Y_train, model, parameters, preprocessador1))
+    # results.append(gridSearchCV("Perceptron Multicapa - 160", X_train, Y_train, model, parameters, preprocessador1))
     
     model = MLPClassifier()
-    results.append(gridSearchCV("Perceptron Multicapa - 561", X_train, Y_train, model, parameters, preprocessador2))
+    # results.append(gridSearchCV("Perceptron Multicapa - 561", X_train, Y_train, model, parameters, preprocessador2))
     
+<<<<<<< HEAD
     """
     ########################  SVM  ########################
     
@@ -503,13 +520,28 @@ def SelectBestModel(X_train, Y_train, verbose=True):
                   'kernel':['linear','poly'],
                   'degree':[2, 3, 4, 5],
                   'C':[10, 1, 10, 100, 1000, 10000, 100000]                
+=======
+    ################### Random Forest ###################
+    
+    
+    parameters = {'criterion':['gini'],
+                  'min_samples_split':[2],
+                  'min_samples_leaf':[1],
+                  'max_features':['sqrt'],
+                  'min_impurity_decrease':[0],
+                  'bootstrap':[True],
+                  
+                  'n_estimators':[10, 100, 500, 1000],
+                  'max_depth':[None, 25, 50],
+>>>>>>> ab02366a7c6109ff07eb8f60981fcae8d55b87b0
                   }
     
-    model = SVC()
-    results.append(gridSearchCV("SVC - 160", X_train, Y_train, model, parameters, preprocessador1))
+    model = RandomForestClassifier()
+    results.append(gridSearchCV("Random Forest - 160", X_train, Y_train, model, parameters, preprocessador1))
     
-    model = SVC()
-    results.append(gridSearchCV("SVC - 561", X_train, Y_train, model, parameters, preprocessador2))
+    model = RandomForestClassifier()
+    results.append(gridSearchCV("Random Forest - 561", X_train, Y_train, model, parameters, preprocessador2))
+    
     
     
     ################### Selección del mejor modelo ###################
@@ -569,7 +601,7 @@ def main():
     SelectBestModel(X_train, Y_train);
     
     
-    # preprocessador1 = fitPreproccesser(X_train, Y_train, reduce_dimensionality=60)
+    # preprocessador1 = fitPreproccesser(X_train, Y_train, reduce_dimensionality=160)
     
     # X_train, Y_train = preprocessador1(X_train, Y_train)
     # X_test, Y_test = preprocessador1(X_test, Y_test, is_test=True)
