@@ -462,6 +462,8 @@ def crossValidationIndividuals(X, Y, N, model, cv=5, verbose=0):
                     X_i = np.concatenate((X_i, X_fold[i]), axis=0)
                     Y_i = np.concatenate((Y_i, Y_fold[i]), axis=0)
         
+        X_i, Y_i = ShuffleData(X_i, Y_i)
+        
         model = clone(model)
         
         start_time = time.time()
@@ -488,7 +490,7 @@ def crossValidationIndividuals(X, Y, N, model, cv=5, verbose=0):
             print(f"Ecv {val_error} Ein {train_error} Tiempo {seconds}")
     
     if (verbose >= 1):
-        print(f"Ecv {mean(ecv)} Ein {mean(ein)} Tiempo {mean(times)}")
+        print(f"Resultados Medios CV: Ecv {mean(ecv)} Ein {mean(ein)} Tiempo {mean(times)}")
     
     return mean(ecv), mean(ein), mean(times)
 
@@ -679,8 +681,8 @@ def main():
     
     crossValidationIndividuals(X_train, Y_train, N_train, model, cv=5, verbose=2)
     
-    ExperimentReduceDimensionality(X_train, Y_train, N_train, start=5, end=-1, interval=10)
-    ExperimentReduceDimensionality(X_train, Y_train, N_train, start=2, end=100)
+    # ExperimentReduceDimensionality(X_train, Y_train, N_train, start=5, end=-1, interval=10)
+    # ExperimentReduceDimensionality(X_train, Y_train, N_train, start=2, end=100)
     
     return 0
     
