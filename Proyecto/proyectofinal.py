@@ -458,7 +458,7 @@ def SelectBestModel(X_train, Y_train, verbose=True):
     
     preprocessador1 = fitPreproccesser(X_train, Y_train, reduce_dimensionality=160)
     preprocessador2 = fitPreproccesser(X_train, Y_train, reduce_dimensionality=0)
-    
+
     ################### Regresión Logística ###################
     
     parameters = {'max_iter':[100000], 
@@ -475,16 +475,15 @@ def SelectBestModel(X_train, Y_train, verbose=True):
     
     model = SGDClassifier()
     results.append(gridSearchCV("Regresión Logística - 561", X_train, Y_train, model, parameters, preprocessador2))
-    
+
     ########################  SVM  ########################
     
     parameters = {'max_iter':[-1],
                   'cache_size':[200, 400],
                   'class_weight': ['balanced'],
-                  'kernel':['poly'],
-                  'degree':[2, 3, 4, 5 ],
-                  'C':[10, 1, 10, 100, 1000, 10000, 100000]                
-                  }
+                  'kernel':['linear','poly'],
+                  'degree':[2, 3, 4, 5],
+                  'C':[10, 1, 10, 100, 1000, 10000, 100000]}
     
     model = SVC()
     results.append(gridSearchCV("SVC - 160", X_train, Y_train, model, parameters, preprocessador1))
@@ -510,6 +509,7 @@ def SelectBestModel(X_train, Y_train, verbose=True):
     model = MLPClassifier()
     results.append(gridSearchCV("Perceptron Multicapa - 561", X_train, Y_train, model, parameters, preprocessador2))
     
+
     ################### Random Forest ###################
     
     
@@ -529,7 +529,6 @@ def SelectBestModel(X_train, Y_train, verbose=True):
     
     model = RandomForestClassifier()
     results.append(gridSearchCV("Random Forest - 561", X_train, Y_train, model, parameters, preprocessador2))
-    
     
     
     ################### Selección del mejor modelo ###################
