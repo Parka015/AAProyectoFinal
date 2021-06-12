@@ -475,15 +475,15 @@ def SelectBestModel(X_train, Y_train, verbose=True):
     
     model = SGDClassifier()
     results.append(gridSearchCV("Regresión Logística - 561", X_train, Y_train, model, parameters, preprocessador2))
-"""    
+    """    
     ########################  SVM  ########################
     
     parameters = {'max_iter':[-1],
                   'cache_size':[200, 400],
                   'class_weight': ['balanced'],
-                  'kernel':['linear','poly'],
-                  'degree':[2, 3, 4, 5],
-                  'C':[10, 1, 10, 100, 1000, 10000, 100000]}
+                  'kernel':['poly'],
+                  'degree':[1, 2, 3, 4, 5],
+                  'C':[0.1, 1, 10, 100, 1000, 10000, 100000]}
     
     model = SVC()
     results.append(gridSearchCV("SVC - 160", X_train, Y_train, model, parameters, preprocessador1))
@@ -491,7 +491,7 @@ def SelectBestModel(X_train, Y_train, verbose=True):
     model = SVC()
     results.append(gridSearchCV("SVC - 561", X_train, Y_train, model, parameters, preprocessador2))
     
-    
+    """
     ################### Perceptron Multicapa ###################
     
     parameters = {'max_iter':[100000],
@@ -504,12 +504,12 @@ def SelectBestModel(X_train, Y_train, verbose=True):
                   }
     
     model = MLPClassifier()
-    # results.append(gridSearchCV("Perceptron Multicapa - 160", X_train, Y_train, model, parameters, preprocessador1))
+    results.append(gridSearchCV("Perceptron Multicapa - 160", X_train, Y_train, model, parameters, preprocessador1))
     
     model = MLPClassifier()
-    # results.append(gridSearchCV("Perceptron Multicapa - 561", X_train, Y_train, model, parameters, preprocessador2))
+    results.append(gridSearchCV("Perceptron Multicapa - 561", X_train, Y_train, model, parameters, preprocessador2))
     
-"""
+    
     ################### Random Forest ###################
     
     
@@ -530,7 +530,7 @@ def SelectBestModel(X_train, Y_train, verbose=True):
     model = RandomForestClassifier()
     results.append(gridSearchCV("Random Forest - 561", X_train, Y_train, model, parameters, preprocessador2))
     
-"""   
+    """   
     
     ################### Selección del mejor modelo ###################
     
@@ -566,6 +566,17 @@ def DefinitiveModel(X_train, Y_train, X_test, Y_test, definitive_model):
     #Imprimimos la matriz de confusión
     generateConfusionMatrix(X_test, Y_test, model)
 
+
+def gridSearch(X, Y, I, modelo, dictParameters): #-> errorValidation, errorTrain, tiempoMedio, parametros
+
+    
+
+    params_LR = {'C': 1000,\
+                 'class_weight': 'balanced',\
+                'penalty': 'l2',\
+                 'max_iter': 100,\
+                 'solver': 'newton-cg',\
+                'n_jobs': -1}
 
 
 #------------------------------------------------------------------------#
