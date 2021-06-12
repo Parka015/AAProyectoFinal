@@ -428,7 +428,7 @@ def gridSearchCV(name, X_train, Y_train, model, parameters, preprocesser, scorin
     print (f"\n{name}: Training set {X_train.shape}")
     
     # Generamos una grid search
-    clf = GridSearchCV(model, parameters, cv=5, n_jobs=-1, pre_dispatch=4, return_train_score=True)
+    clf = GridSearchCV(model, parameters, cv=5, n_jobs=-1, pre_dispatch=4, verbose=4, return_train_score=True)
     # Ajustamos el modelo
     clf.fit(X_train, Y_train)
     
@@ -471,10 +471,10 @@ def SelectBestModel(X_train, Y_train, verbose=True):
                   }
     
     model = SGDClassifier()
-    # results.append(gridSearchCV("Regresión Logística - 160", X_train, Y_train, model, parameters, preprocessador1))
+    results.append(gridSearchCV("Regresión Logística - 160", X_train, Y_train, model, parameters, preprocessador1))
     
     model = SGDClassifier()
-    # results.append(gridSearchCV("Regresión Logística - 561", X_train, Y_train, model, parameters, preprocessador2))
+    results.append(gridSearchCV("Regresión Logística - 561", X_train, Y_train, model, parameters, preprocessador2))
     
     ########################  SVM  ########################
     
@@ -487,10 +487,10 @@ def SelectBestModel(X_train, Y_train, verbose=True):
                   }
     
     model = SVC()
-    # results.append(gridSearchCV("SVC - 160", X_train, Y_train, model, parameters, preprocessador1))
+    results.append(gridSearchCV("SVC - 160", X_train, Y_train, model, parameters, preprocessador1))
     
     model = SVC()
-    # results.append(gridSearchCV("SVC - 561", X_train, Y_train, model, parameters, preprocessador2))
+    results.append(gridSearchCV("SVC - 561", X_train, Y_train, model, parameters, preprocessador2))
     
     
     ################### Perceptron Multicapa ###################
@@ -505,10 +505,10 @@ def SelectBestModel(X_train, Y_train, verbose=True):
                   }
     
     model = MLPClassifier()
-    # results.append(gridSearchCV("Perceptron Multicapa - 160", X_train, Y_train, model, parameters, preprocessador1))
+    results.append(gridSearchCV("Perceptron Multicapa - 160", X_train, Y_train, model, parameters, preprocessador1))
     
     model = MLPClassifier()
-    # results.append(gridSearchCV("Perceptron Multicapa - 561", X_train, Y_train, model, parameters, preprocessador2))
+    results.append(gridSearchCV("Perceptron Multicapa - 561", X_train, Y_train, model, parameters, preprocessador2))
     
     ################### Random Forest ###################
     
