@@ -478,7 +478,7 @@ def SelectBestModel(X_train, Y_train, verbose=True):
 
     ########################  SVM  ########################
     
-    parameters = {'max_iter':[-1],
+    parameters = {'max_iter':[100000],
                   'cache_size':[200, 400],
                   'class_weight': ['balanced'],
                   'kernel':['linear','poly'],
@@ -519,6 +519,7 @@ def SelectBestModel(X_train, Y_train, verbose=True):
                   'max_features':['sqrt'],
                   'min_impurity_decrease':[0],
                   'bootstrap':[True],
+                  'class_weight': ['balanced'],
                   
                   'n_estimators':[10, 100, 500, 1000],
                   'max_depth':[None, 25, 50],
