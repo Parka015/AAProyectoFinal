@@ -591,7 +591,7 @@ def SelectBestModel(X_train, Y_train, N_train, verbose=True):
     preprocessador2 = fitPreproccesser(X_train, Y_train, N_train, reduce_dimensionality=0)
 
     ################### Regresión Logística ###################
-    """
+    
     parameters = {'max_iter':[100000], 
                   'loss':['log'],
                   'learning_rate':['adaptive'],
@@ -609,7 +609,7 @@ def SelectBestModel(X_train, Y_train, N_train, verbose=True):
     results.append(fitBestParameters("Regresión Logística - 561", X_train, Y_train, N_train, model, parameters, preprocessador2))
 
     ########################  SVM  ########################
-    """
+    
     parameters = {'max_iter':[100000],
                   'cache_size':[200, 400],
                   'class_weight': ['balanced'],
@@ -624,9 +624,9 @@ def SelectBestModel(X_train, Y_train, N_train, verbose=True):
     results.append(fitBestParameters("SVC - 561", X_train, Y_train, N_train, model, parameters, preprocessador2))
 
     
-    """
+    
     ################### Perceptron Multicapa ###################
-    """
+    
     parameters = {'max_iter':[100000],
                   'learning_rate':['adaptive'],
                   
@@ -721,7 +721,6 @@ def main():
     
     # Experimentos realizados para escoger un valor de dimensionalidad óptimo
     # ExperimentReduceDimensionality(X_train, Y_train, N_train, start=5, end=-1, interval=10)
-
     # ExperimentReduceDimensionality(X_train, Y_train, N_train, start=90, end=250, interval=2)
 
     
