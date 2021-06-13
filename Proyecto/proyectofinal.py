@@ -24,6 +24,7 @@ from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
 import time
 from statistics import mean
+import itertools
 
 # Fijamos la semilla
 np.random.seed(1)
@@ -648,17 +649,33 @@ def TrainTestDefinitiveModel(X_train, Y_train, X_test, Y_test, model, name, prep
     #Imprimimos la matriz de confusión
     generateConfusionMatrix(X_test, Y_test, model)
 
-
+#Hace la funcion equivalente a GridSearchCV, se proporcionan unos datos(x) unas etiquetas (Y)
+#Una lista del usuario al que corresponde a cada dato y etiqueta y un diccionario de parámetros
 def gridSearch(X, Y, I, modelo, dictParameters): #-> errorValidation, errorTrain, tiempoMedio, parametros
-
+ 
+    parametros=[]
+    valores=[]
     
-
-    params_LR = {'C': 1000,\
-                 'class_weight': 'balanced',\
-                'penalty': 'l2',\
-                 'max_iter': 100,\
-                 'solver': 'newton-cg',\
-                'n_jobs': -1}
+    
+    for i in dictParameters:
+        if len(dictParameters[i]) > 1:  #Para aquellas claves que tengan más de un valor,
+            parametros.append(i)            # la clave se guarda en parametros
+            valores.append(dictParameters[i])   # Y los 'valores' que puede tomar en la variable valores
+    
+    combinaciones=list(itertools.product(*valores)) # Generamos todas las combinaciones de los distintos
+                                                # valores de los parámetros. Devuelve una lista de tuplas
+    
+    diccionario_parametros=dictParameters.copy()
+    
+    for combinacion in combinaciones:       #Para cada combinacion (es una tupla), actualizaremos los valores que deben
+        for j in range(len(parametros)):            #tomar las claves del diccionario (los parámetros)
+            aux = {parametros[j]:combinacion[j]}
+            diccionario_parametros.update(aux)  #Actualizamos el valor asociado a una clave
+        
+        modelo.set_params(**diccionario_parametros)
+        # Aquí iría la función cross-validation
+        
+        
 
 
 #------------------------------------------------------------------------#
