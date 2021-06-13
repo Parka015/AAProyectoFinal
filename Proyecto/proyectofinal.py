@@ -654,7 +654,7 @@ def TrainTestDefinitiveModel(X_train, Y_train, N_train, X_test, Y_test, N_test, 
 
 #Calcula la cota con la desigualdad de Hoeffding y el error en el conjunto de test
 def cotaTest(N, Etest, delta):
-    return Etest - np.sqrt(8/N*np.log(2/delta))
+    return Etest - np.sqrt(1/(2*N)*np.log(2/delta))
 
 
 #------------------------------------------------------------------------#
@@ -673,7 +673,6 @@ def main():
     
     # Experimentos realizados para escoger un valor de dimensionalidad óptimo
     # ExperimentReduceDimensionality(X_train, Y_train, N_train, start=5, end=-1, interval=10)
-    # ExperimentReduceDimensionality(X_train, Y_train, N_train, start=90, end=250, interval=2)
 
     
     #Mostramos información de los datos originales
