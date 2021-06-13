@@ -518,7 +518,7 @@ def gridSearch(X, Y, N, model, dictParameters, cv=5, verbose=0): #-> errorValida
     results = []
     
     if (verbose >= 1):
-        print(f"N Fits: Combinaciones {len(combinaciones)} X CV {cv} = {len(combinaciones)*cv}")
+        print(f"N Fits: Combinaciones {len(combinaciones)} * CV {cv} = {len(combinaciones)*cv}")
     
     for combinacion in combinaciones:       #Para cada combinacion (es una tupla), actualizaremos los valores que deben
         for j in range(len(parametros)):            #tomar las claves del diccionario (los parámetros)
@@ -586,7 +586,7 @@ def SelectBestModel(X_train, Y_train, N_train, verbose=True):
     max_iter = 100000
     
     if (verbose):
-        print("Preprocesando datos:")
+        print("Preprocesando datos...")
     
     preprocessador1 = fitPreproccesser(X_train, Y_train, N_train, reduce_dimensionality=160)
     preprocessador2 = fitPreproccesser(X_train, Y_train, N_train, reduce_dimensionality=0)
@@ -622,7 +622,7 @@ def SelectBestModel(X_train, Y_train, N_train, verbose=True):
     # results.append(fitBestParameters("SVC - 160", X_train, Y_train, N_train, model, parameters, preprocessador1))
     
     model = SVC()
-    # results.append(fitBestParameters("SVC - 561", X_train, Y_train, N_train, model, parameters, preprocessador2))
+    results.append(fitBestParameters("SVC - 561", X_train, Y_train, N_train, model, parameters, preprocessador2))
     
     
     ################### Perceptron Multicapa ###################
@@ -637,10 +637,10 @@ def SelectBestModel(X_train, Y_train, N_train, verbose=True):
                   }
     
     model = MLPClassifier()
-    results.append(fitBestParameters("Perceptron Multicapa - 160", X_train, Y_train, N_train, model, parameters, preprocessador1))
+    # results.append(fitBestParameters("Perceptron Multicapa - 160", X_train, Y_train, N_train, model, parameters, preprocessador1))
     
     model = MLPClassifier()
-    results.append(fitBestParameters("Perceptron Multicapa - 561", X_train, Y_train, N_train, model, parameters, preprocessador2))
+    # results.append(fitBestParameters("Perceptron Multicapa - 561", X_train, Y_train, N_train, model, parameters, preprocessador2))
 
     ################### Random Forest ###################
     
@@ -696,11 +696,14 @@ def TrainTestDefinitiveModel(X_train, Y_train, N_train, X_test, Y_test, N_test, 
     print(f"\nMODELO DEFINITIVO: {name}")
     print(f"Ein: {train_error}")
     print(f"Etest: {test_error}")
+    print(f"Cota sobre Eout (95% confianza): {cotaTest(len(Y_test), test_error, 0.05)}")
     
     #Imprimimos la matriz de confusión
     generateConfusionMatrix(X_test, Y_test, model)
 
-
+#Calcula la cota con la desigualdad de Hoeffding y el error en el conjunto de test
+def cotaTest(N, Etest, delta):
+    return Etest - np.sqrt(8/N*np.log(2/delta))
 
 
 #------------------------------------------------------------------------#
@@ -717,9 +720,9 @@ def main():
     print(f"Train: {X_train.shape} {Y_train.shape}")
     print(f"Test: {X_test.shape} {Y_test.shape}")
     
-    
+    # Experimentos realizados para escoger un valor de dimensionalidad óptimo
     # ExperimentReduceDimensionality(X_train, Y_train, N_train, start=5, end=-1, interval=10)
-    # ExperimentReduceDimensionality(X_train, Y_train, N_train, start=2, end=100)
+    # ExperimentReduceDimensionality(X_train, Y_train, N_train, start=90, end=250, interval=2)
     
     #Mostramos información de los datos originales
     individualsDistribution(N)
@@ -727,22 +730,20 @@ def main():
     
     
     #Mostramos información de los datos preprocesados
-    # preprocessador1 = fitPreproccesser(X_train, Y_train, N_train, reduce_dimensionality=160, show_info=True)
-    # X_train_preprocessed, Y_train_preprocessed, N_train_preprocessed = preprocessador1(X_train, Y_train, N_train)
-    # DataInformation(X_train_preprocessed, Y_train_preprocessed)
+    preprocessador1 = fitPreproccesser(X_train, Y_train, N_train, reduce_dimensionality=160, show_info=True)
+    X_train_preprocessed, Y_train_preprocessed, N_train_preprocessed = preprocessador1(X_train, Y_train, N_train)
+    DataInformation(X_train_preprocessed, Y_train_preprocessed)
     
     
     # Seleccionamos los mejores parámetros con grid search y cross validation
     # y nos quedamos con la mejor hipótesis
-    SelectBestModel(X_train, Y_train, N_train)
-    
+    # SelectBestModel(X_train, Y_train, N_train)
     
     # La experimentación nos ha mostrado que la mejor hipótesis es el MLP
-    # best_hypotesis = MLPClassifier(max_iter=100000, learning_rate='adaptive',
-    #                                activation='tanh', hidden_layer_sizes=[100, 50],
-    #                                learning_rate_init=0.01, alpha=0.001)
+    best_hypotesis = SGDClassifier(max_iter=100000, loss='log',learning_rate='adaptive',
+                                   penalty='l2', alpha=1e-5, eta0=0.001)
 
-    # TrainTestDefinitiveModel(X_train, Y_train, N_train, X_test, Y_test, N_test, best_hypotesis, "Perceptron Multicapa - 160", preprocessador1)
+    TrainTestDefinitiveModel(X_train, Y_train, N_train, X_test, Y_test, N_test, best_hypotesis, "Perceptron Multicapa - 160", preprocessador1)
     
     
     
