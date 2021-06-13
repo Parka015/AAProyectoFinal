@@ -69,13 +69,6 @@ def plotData(tsne_result, y=None, title=None):
     ax.set_title(title)
     plt.show()
     
-def PlotBoxPlot(X, title=None):
-    fig, ax = plt.subplots()
-    bp = ax.boxplot(X)
-    ax.set_title(title)
-    # ax.set_xticks(np.arange(0, X.shape[1]+1, 5))
-    plt.show()
-    
 # Muestra gráfico de barras. Los datos deben ser ("title", value) o ("title", value, color)
 def PlotBars(data, title=None, y_label=None, dateformat=False):
     strings = [i[0] for i in data]
@@ -146,20 +139,6 @@ def readDataHARS():
     
     return X, Y, N
 
-# Devuelve una matriz categorical para las etiquetas
-def toCategorical(y, n_classes):
-    cat = np.zeros((y.size, n_classes), dtype=float)
-    for i in range(y.size):
-        cat[i][y[i]] = 1
-    return cat
-
-# Inversa de categorical, devuelve un vector con las etiquetas
-def toLabel(y):
-    label = np.zeros((y.shape[0]), dtype=float)
-    for i in range(y.shape[0]):
-        label[i] = np.where(y[i][:] == 1)[0]
-    return label
-
 #------------------------------------------------------------------------#
 #---------------------- Separación Train-Test ---------------------------#
 #------------------------------------------------------------------------#
@@ -192,6 +171,7 @@ def splitData(X, Y, N, test_percent):
     
     return X_train, Y_train, N_train, X_test, Y_test, N_test
 
+# Baraja aleatoriamente los datos
 def ShuffleData(X, Y, N=None):
     randomize = np.arange(len(X))
     np.random.shuffle(randomize)
@@ -248,32 +228,11 @@ def showStatisticPlot( X, par_estad='mean' , axis=0, title=None, c='red' , line=
         PlotGraphic(std, title=title, c=c , line=line ,axis_title=axis_title, scale=scale, ylim=ylim)
     
 
-# tSNE para visualizar los datos
-def tSNE(X, Y):
-    tsne = TSNE(n_components=2, verbose=1, perplexity=50, n_iter=300)
-    tsne_results = tsne.fit_transform(X, Y)
-    return tsne_results
-
-# PCA para visualizar los datos
-def applyPCA(X, Y, n_components=2):
-    pca = fitPCA(X, Y, n_components)
-    X = pca.transform(X)
-    pca_results = pca.fit_transform(X, Y)
-    return pca_results
-
 # Ajustamos un PCA para reducir la dimensionalidad
 def fitPCA(X, Y, n_components=0.95):
     pca = PCA(n_components=n_components, svd_solver='full')
     pca.fit(X, Y)
     return pca
-
-# PCA para reducir la dimensionalidad
-def reduceDimensionality(X, Y, std_percent=0.95):
-    print(f"Matriz inicial: {X.shape} std: {X.std()}")
-    pca = PCA(n_components=std_percent, svd_solver='full')
-    new_X = pca.fit_transform(X, Y)
-    print(f"Matriz final: {new_X.shape} std: {new_X.std()}")
-    return new_X
 
 # Muestra un gráfico con el número de muestras de cada etiqueta
 def dataLabelDistribution(X, Y):
@@ -285,13 +244,6 @@ def dataLabelDistribution(X, Y):
         data.append([f"{val}", count])
     PlotBars(data, "Número de muestras por etiqueta")
 
-# Muestra un boxplot de los datos
-def dataBoxPlot(X, Y):
-    # Mostramos estadísticas en pantalla
-    df_describe = pd.DataFrame(X)
-    print(df_describe.describe())
-    
-    PlotBoxPlot(X, "Data Box-Plot")
 
 # Muestra un gráfico con el número de muestras de cada individuo
 def individualsDistribution(N):
