@@ -385,7 +385,7 @@ def fitPreproccesser(X_train, Y_train, N_train, remove_outliers=True, reduce_dim
 
     n_data_original = X_train.shape[0]
     if (remove_outliers):
-        X_train, Y_train = outliersEliminationK_Neightbours(X_train, Y_train, N_train)
+        X_train, Y_train, N_train = outliersEliminationK_Neightbours(X_train, Y_train, N_train)
         n_data_without_outliers = X_train.shape[0]
         
         if (show_info):
@@ -400,11 +400,11 @@ def fitPreproccesser(X_train, Y_train, N_train, remove_outliers=True, reduce_dim
     if (normalize):
             normalize = generateNormalizer(X_train)
     
-    def preproccess(X, Y, is_test=False):
+    def preproccess(X, Y, N, is_test=False):
         
         # Eliminamos los outliers
         if (remove_outliers and not is_test):
-            X, Y = outliersEliminationK_Neightbours(X, Y)
+            X, Y, N = outliersEliminationK_Neightbours(X, Y, N)
         
         # Reducimos dimensionalidad
         if (reduce_dimensionality > 0):
@@ -414,7 +414,7 @@ def fitPreproccesser(X_train, Y_train, N_train, remove_outliers=True, reduce_dim
         if (normalize):
             X = normalize(X)
         
-        return X, Y
+        return X, Y, N
     
     return preproccess
 
@@ -493,32 +493,75 @@ def crossValidationIndividuals(X, Y, N, model, cv=5, verbose=0):
     if (verbose >= 1):
         print(f"Resultados Medios CV: Ecv {mean(ecv)} Ein {mean(ein)} Tiempo {mean(times)}")
     
-    return mean(ecv), mean(ein), mean(times)
+    return [mean(ecv), mean(ein), mean(times)]
 
 
-def ShowCVResults(name, results):
-    index = np.argmax(results.cv_results_['mean_test_score'])
+#Hace la funcion equivalente a GridSearchCV, se proporcionan unos datos(x) unas etiquetas (Y)
+#Una lista del usuario al que corresponde a cada dato y etiqueta y un diccionario de parámetros
+def gridSearch(X, Y, N, model, dictParameters, verbose=0): #-> errorValidation, errorTrain, tiempoMedio, parametros
+ 
+    parametros=[]
+    valores=[]
     
-    print(f"{name} mejores parámetros:\n{results.best_params_}")
-    print(f"Ecv: {results.best_score_} Ein: {results.cv_results_['mean_train_score'][index]}")
-    print(f"Tiempo: {results.cv_results_['mean_fit_time'][index]} seg")
+    
+    for i in dictParameters:
+        # if len(dictParameters[i]) > 1:  #Para aquellas claves que tengan más de un valor,
+            parametros.append(i)            # la clave se guarda en parametros
+            valores.append(dictParameters[i])   # Y los 'valores' que puede tomar en la variable valores
+    
+    combinaciones=list(itertools.product(*valores)) # Generamos todas las combinaciones de los distintos
+                                                # valores de los parámetros. Devuelve una lista de tuplas
+    
+    diccionario_parametros=dictParameters.copy()
+    
+    results = []
+    
+    for combinacion in combinaciones:       #Para cada combinacion (es una tupla), actualizaremos los valores que deben
+        for j in range(len(parametros)):            #tomar las claves del diccionario (los parámetros)
+            aux = {parametros[j]:combinacion[j]}
+            diccionario_parametros.update(aux)  #Actualizamos el valor asociado a una clave
+        
+        model.set_params(**diccionario_parametros)
+        
+        # Realizamos cross-validation
+        results.append(crossValidationIndividuals(X, Y, N, model))
+        results[-1].append(diccionario_parametros)
+        
+        if (verbose >= 2):
+            print(f"Parámetros: {diccionario_parametros}")
+            print(f"Resultados Medios CV: Ecv {results[-1][0]} Ein {results[-1][1]} Tiempo {results[-1][2]}")
+    
+    # Seleccionamos la mejor versión
+    best_model = results[0]
+    for i in results:
+        if (i[0] > best_model[0]):
+            best_model = i
+            
+    return best_model
+        
 
-def gridSearchCV(name, X_train, Y_train, model, parameters, preprocesser, scoring='balanced_accuracy'):
+def fitBestParameters(name, X_train, Y_train, N_train, model, parameters, preprocesser, verbose=0):
     # Preprocesamos los datos
-    X_train, Y_train = preprocesser(X_train, Y_train, is_test=False)
+    X_train, Y_train, N_train = preprocesser(X_train, Y_train, N_train, is_test=False)
     
-    print (f"\n{name}: Training set {X_train.shape}")
+    if (verbose >= 1):
+        print (f"\n{name}: Training set {X_train.shape}")
     
-    # Generamos una grid search
-    clf = GridSearchCV(model, parameters, cv=5, n_jobs=-1, pre_dispatch=4, verbose=4, return_train_score=True)
-    # Ajustamos el modelo
-    clf.fit(X_train, Y_train)
+    # # Generamos una grid search
+    # clf = GridSearchCV(model, parameters, cv=5, n_jobs=-1, pre_dispatch=4, verbose=4, return_train_score=True)
+    # # Ajustamos el modelo
+    # clf.fit(X_train, Y_train)
     
-    ShowCVResults(name, clf)
+    results = gridSearch(X_train, Y_train, N_train, model, parameters, verbose-1)
+    
+    if (verbose >= 1):
+        print(f"{name} mejores parámetros:\n{results[3]}")
+        print(f"Ecv: {results[0]} Ein: {results[1]}")
+        print(f"Tiempo: {results[2]} seg")
     
     # En esta lista guardaremos el mejor modelo = 
     # [nombre, accuracy_cv, copy of the model, parameters]
-    return [name, clf.best_score_, clone(clf.best_estimator_), clf.best_params_, preprocesser]
+    return [name, results[0], clone(model), results[3], preprocesser]
     
 
 
@@ -553,11 +596,11 @@ def SelectBestModel(X_train, Y_train, verbose=True):
                   }
     
     model = SGDClassifier()
-    # results.append(gridSearchCV("Regresión Logística - 160", X_train, Y_train, model, parameters, preprocessador1))
+    # results.append(fitBestParameters("Regresión Logística - 160", X_train, Y_train, model, parameters, preprocessador1))
     
     model = SGDClassifier()
 
-    #results.append(gridSearchCV("Regresión Logística - 561", X_train, Y_train, model, parameters, preprocessador2))
+    #results.append(fitBestParameters("Regresión Logística - 561", X_train, Y_train, model, parameters, preprocessador2))
 
     ########################  SVM  ########################
     
@@ -569,10 +612,10 @@ def SelectBestModel(X_train, Y_train, verbose=True):
                   'C':[0.1, 1, 10, 100, 1000, 10000, 100000]}
     
     model = SVC()
-    # results.append(gridSearchCV("SVC - 160", X_train, Y_train, model, parameters, preprocessador1))
+    # results.append(fitBestParameters("SVC - 160", X_train, Y_train, model, parameters, preprocessador1))
     
     model = SVC()
-    # results.append(gridSearchCV("SVC - 561", X_train, Y_train, model, parameters, preprocessador2))
+    # results.append(fitBestParameters("SVC - 561", X_train, Y_train, model, parameters, preprocessador2))
     
     """
     ################### Perceptron Multicapa ###################
@@ -587,10 +630,10 @@ def SelectBestModel(X_train, Y_train, verbose=True):
                   }
     
     model = MLPClassifier()
-    results.append(gridSearchCV("Perceptron Multicapa - 160", X_train, Y_train, model, parameters, preprocessador1))
+    results.append(fitBestParameters("Perceptron Multicapa - 160", X_train, Y_train, model, parameters, preprocessador1))
     
     model = MLPClassifier()
-    results.append(gridSearchCV("Perceptron Multicapa - 561", X_train, Y_train, model, parameters, preprocessador2))
+    results.append(fitBestParameters("Perceptron Multicapa - 561", X_train, Y_train, model, parameters, preprocessador2))
 
     ################### Random Forest ###################
     
@@ -608,10 +651,10 @@ def SelectBestModel(X_train, Y_train, verbose=True):
                   }
     
     model = RandomForestClassifier()
-    # results.append(gridSearchCV("Random Forest - 160", X_train, Y_train, model, parameters, preprocessador1))
+    # results.append(fitBestParameters("Random Forest - 160", X_train, Y_train, model, parameters, preprocessador1))
     
     model = RandomForestClassifier()
-    # results.append(gridSearchCV("Random Forest - 561", X_train, Y_train, model, parameters, preprocessador2))
+    # results.append(fitBestParameters("Random Forest - 561", X_train, Y_train, model, parameters, preprocessador2))
     
     """   
     
@@ -651,33 +694,7 @@ def TrainTestDefinitiveModel(X_train, Y_train, X_test, Y_test, model, name, prep
     #Imprimimos la matriz de confusión
     generateConfusionMatrix(X_test, Y_test, model)
 
-#Hace la funcion equivalente a GridSearchCV, se proporcionan unos datos(x) unas etiquetas (Y)
-#Una lista del usuario al que corresponde a cada dato y etiqueta y un diccionario de parámetros
-def gridSearch(X, Y, I, modelo, dictParameters): #-> errorValidation, errorTrain, tiempoMedio, parametros
- 
-    parametros=[]
-    valores=[]
-    
-    
-    for i in dictParameters:
-        if len(dictParameters[i]) > 1:  #Para aquellas claves que tengan más de un valor,
-            parametros.append(i)            # la clave se guarda en parametros
-            valores.append(dictParameters[i])   # Y los 'valores' que puede tomar en la variable valores
-    
-    combinaciones=list(itertools.product(*valores)) # Generamos todas las combinaciones de los distintos
-                                                # valores de los parámetros. Devuelve una lista de tuplas
-    
-    diccionario_parametros=dictParameters.copy()
-    
-    for combinacion in combinaciones:       #Para cada combinacion (es una tupla), actualizaremos los valores que deben
-        for j in range(len(parametros)):            #tomar las claves del diccionario (los parámetros)
-            aux = {parametros[j]:combinacion[j]}
-            diccionario_parametros.update(aux)  #Actualizamos el valor asociado a una clave
-        
-        modelo.set_params(**diccionario_parametros)
-        # Aquí iría la función cross-validation
-        
-        
+
 
 
 #------------------------------------------------------------------------#
@@ -694,25 +711,41 @@ def main():
     print(f"Train: {X_train.shape} {Y_train.shape}")
     print(f"Test: {X_test.shape} {Y_test.shape}")
     
-    loss='log'
-    learning_rate='adaptive'
-    eta = 0.01
-    regularization = 'None'
-    alpha = 0.0001
-    model   = SGDClassifier(loss=loss, 
-                        learning_rate=learning_rate,
-                        eta0 = eta, 
-                        penalty=regularization, 
-                        alpha = alpha, 
-                        max_iter = 100000,
-                        shuffle=True, 
-                        fit_intercept=True, 
-                        n_jobs=-1)
+    # loss='log'
+    # learning_rate='adaptive'
+    # eta = 0.01
+    # regularization = 'None'
+    # alpha = 0.0001
+    # model   = SGDClassifier(loss=loss, 
+    #                     learning_rate=learning_rate,
+    #                     eta0 = eta, 
+    #                     penalty=regularization, 
+    #                     alpha = alpha, 
+    #                     max_iter = 100000,
+    #                     shuffle=True, 
+    #                     fit_intercept=True, 
+    #                     n_jobs=-1)
     
-    crossValidationIndividuals(X_train, Y_train, N_train, model, cv=5, verbose=2)
+    # crossValidationIndividuals(X_train, Y_train, N_train, model, cv=5, verbose=2)
     
     # ExperimentReduceDimensionality(X_train, Y_train, N_train, start=5, end=-1, interval=10)
     # ExperimentReduceDimensionality(X_train, Y_train, N_train, start=2, end=100)
+    
+    
+    parameters = {'max_iter':[100000], 
+                  'loss':['log'],
+                  'learning_rate':['adaptive'],
+                  
+                  'penalty':['l1', 'l2'],
+                  'alpha':[0.001],
+                  'eta0':[0.1, 0.01],
+                  }
+    
+    model = SGDClassifier()
+    
+    preprocessador1 = fitPreproccesser(X_train, Y_train, N_train, reduce_dimensionality=160)
+    
+    fitBestParameters("RL", X_train, Y_train, N_train, model, parameters, preprocessador1, verbose=1)
     
     return 0
     
