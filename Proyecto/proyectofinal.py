@@ -552,10 +552,6 @@ def fitBestParameters(name, X_train, Y_train, N_train, model, parameters, prepro
         print (f"\n{name}: Training set {X_train.shape}")
     
     # # Generamos una grid search
-    # clf = GridSearchCV(model, parameters, cv=5, n_jobs=-1, pre_dispatch=4, verbose=4, return_train_score=True)
-    # # Ajustamos el modelo
-    # clf.fit(X_train, Y_train)
-    
     results = gridSearch(X_train, Y_train, N_train, model, parameters, cv=5, verbose=verbose)
     
     if (verbose >= 1):
@@ -603,11 +599,11 @@ def SelectBestModel(X_train, Y_train, N_train, verbose=True):
                   }
     
     model = SGDClassifier()
-    # results.append(fitBestParameters("Regresión Logística - 160", X_train, Y_train, N_train, model, parameters, preprocessador1))
+    results.append(fitBestParameters("Regresión Logística - 160", X_train, Y_train, N_train, model, parameters, preprocessador1))
     
     model = SGDClassifier()
 
-    # results.append(fitBestParameters("Regresión Logística - 561", X_train, Y_train, N_train, model, parameters, preprocessador2))
+    results.append(fitBestParameters("Regresión Logística - 561", X_train, Y_train, N_train, model, parameters, preprocessador2))
 
     ########################  SVM  ########################
     
@@ -619,7 +615,7 @@ def SelectBestModel(X_train, Y_train, N_train, verbose=True):
                   'C':[0.1, 1, 10, 100, 1000, 10000, 100000]}
     
     model = SVC()
-    # results.append(fitBestParameters("SVC - 160", X_train, Y_train, N_train, model, parameters, preprocessador1))
+    results.append(fitBestParameters("SVC - 160", X_train, Y_train, N_train, model, parameters, preprocessador1))
     
     model = SVC()
     results.append(fitBestParameters("SVC - 561", X_train, Y_train, N_train, model, parameters, preprocessador2))
@@ -637,10 +633,10 @@ def SelectBestModel(X_train, Y_train, N_train, verbose=True):
                   }
     
     model = MLPClassifier()
-    # results.append(fitBestParameters("Perceptron Multicapa - 160", X_train, Y_train, N_train, model, parameters, preprocessador1))
+    results.append(fitBestParameters("Perceptron Multicapa - 160", X_train, Y_train, N_train, model, parameters, preprocessador1))
     
     model = MLPClassifier()
-    # results.append(fitBestParameters("Perceptron Multicapa - 561", X_train, Y_train, N_train, model, parameters, preprocessador2))
+    results.append(fitBestParameters("Perceptron Multicapa - 561", X_train, Y_train, N_train, model, parameters, preprocessador2))
 
     ################### Random Forest ###################
     
@@ -658,10 +654,10 @@ def SelectBestModel(X_train, Y_train, N_train, verbose=True):
                   }
     
     model = RandomForestClassifier()
-    # results.append(fitBestParameters("Random Forest - 160", X_train, Y_train, N_train, model, parameters, preprocessador1))
+    results.append(fitBestParameters("Random Forest - 160", X_train, Y_train, N_train, model, parameters, preprocessador1))
     
     model = RandomForestClassifier()
-    # results.append(fitBestParameters("Random Forest - 561", X_train, Y_train, N_train, model, parameters, preprocessador2))
+    results.append(fitBestParameters("Random Forest - 561", X_train, Y_train, N_train, model, parameters, preprocessador2))
     
     
     ################### Selección del mejor modelo ###################
@@ -686,12 +682,10 @@ def TrainTestDefinitiveModel(X_train, Y_train, N_train, X_test, Y_test, N_test, 
     # Resultados sobre los datos de train
     train_predict = model.predict(X_train)
     train_error = balanced_accuracy_score(Y_train, train_predict)
-    # train_error = model.score(X_train, Y_train)
     
     # Resultados sobre los datos de test
     test_predict = model.predict(X_test)
     test_error = balanced_accuracy_score(Y_test, test_predict)
-    # test_error = model.score(X_test, Y_test)
     
     print(f"\nMODELO DEFINITIVO: {name}")
     print(f"Ein: {train_error}")
@@ -739,11 +733,11 @@ def main():
     # y nos quedamos con la mejor hipótesis
     # SelectBestModel(X_train, Y_train, N_train)
     
-    # La experimentación nos ha mostrado que la mejor hipótesis es el MLP
+    # La experimentación nos ha mostrado que la mejor hipótesis es la RL
     best_hypotesis = SGDClassifier(max_iter=100000, loss='log',learning_rate='adaptive',
                                    penalty='l2', alpha=1e-5, eta0=0.001)
 
-    TrainTestDefinitiveModel(X_train, Y_train, N_train, X_test, Y_test, N_test, best_hypotesis, "Perceptron Multicapa - 160", preprocessador1)
+    TrainTestDefinitiveModel(X_train, Y_train, N_train, X_test, Y_test, N_test, best_hypotesis, "Regresión Logística - 160", preprocessador1)
     
     
     
