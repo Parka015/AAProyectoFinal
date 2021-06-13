@@ -368,6 +368,9 @@ def ExperimentReduceDimensionality(X, Y, N, start=1, end=-1, interval=2, clasifi
         
         Ecv.append(results[0])
     
+        
+    plt.plot(sizes, Ecv, c='red' , linewidth=2)
+    input("A")
     PlotGraphic(X=sizes, Y=Ecv, title="Ecv over dimension", axis_title=("Dimension", "Ecv"))
     
 # Generamos un normalizador con los datos de train
@@ -584,7 +587,7 @@ def SelectBestModel(X_train, Y_train, N_train, verbose=True):
     preprocessador2 = fitPreproccesser(X_train, Y_train, N_train, reduce_dimensionality=0)
 
     ################### Regresión Logística ###################
-    
+    """
     parameters = {'max_iter':[100000], 
                   'loss':['log'],
                   'learning_rate':['adaptive'],
@@ -599,10 +602,10 @@ def SelectBestModel(X_train, Y_train, N_train, verbose=True):
     
     model = SGDClassifier()
 
-    #results.append(fitBestParameters("Regresión Logística - 561", X_train, Y_train, N_train, model, parameters, preprocessador2))
-
+    results.append(fitBestParameters("Regresión Logística - 561", X_train, Y_train, N_train, model, parameters, preprocessador2))
+    """
     ########################  SVM  ########################
-    
+    """
     parameters = {'max_iter':[100000],
                   'cache_size':[200, 400],
                   'class_weight': ['balanced'],
@@ -611,14 +614,14 @@ def SelectBestModel(X_train, Y_train, N_train, verbose=True):
                   'C':[0.1, 1, 10, 100, 1000, 10000, 100000]}
     
     model = SVC()
-    # results.append(fitBestParameters("SVC - 160", X_train, Y_train, N_train, model, parameters, preprocessador1))
+    results.append(fitBestParameters("SVC - 160", X_train, Y_train, N_train, model, parameters, preprocessador1))
     
     model = SVC()
-    # results.append(fitBestParameters("SVC - 561", X_train, Y_train, N_train, model, parameters, preprocessador2))
+    results.append(fitBestParameters("SVC - 561", X_train, Y_train, N_train, model, parameters, preprocessador2))
     
-    
+    """
     ################### Perceptron Multicapa ###################
-    
+    """
     parameters = {'max_iter':[100000],
                   'learning_rate':['adaptive'],
                   
@@ -633,9 +636,8 @@ def SelectBestModel(X_train, Y_train, N_train, verbose=True):
     
     model = MLPClassifier()
     # results.append(fitBestParameters("Perceptron Multicapa - 561", X_train, Y_train, N_train, model, parameters, preprocessador2))
-
+    """
     ################### Random Forest ###################
-    
     
     parameters = {'criterion':['gini'],
                   'min_samples_split':[2],
@@ -650,12 +652,12 @@ def SelectBestModel(X_train, Y_train, N_train, verbose=True):
                   }
     
     model = RandomForestClassifier()
-    # results.append(fitBestParameters("Random Forest - 160", X_train, Y_train, N_train, model, parameters, preprocessador1))
+    results.append(fitBestParameters("Random Forest - 160", X_train, Y_train, N_train, model, parameters, preprocessador1))
     
     model = RandomForestClassifier()
-    # results.append(fitBestParameters("Random Forest - 561", X_train, Y_train, N_train, model, parameters, preprocessador2))
+    results.append(fitBestParameters("Random Forest - 561", X_train, Y_train, N_train, model, parameters, preprocessador2))
     
-    
+
     ################### Selección del mejor modelo ###################
     
     best_model = GetBestModel(results)
@@ -712,6 +714,7 @@ def main():
     
     # ExperimentReduceDimensionality(X_train, Y_train, N_train, start=5, end=-1, interval=10)
     # ExperimentReduceDimensionality(X_train, Y_train, N_train, start=2, end=100)
+    ExperimentReduceDimensionality(X_train, Y_train, N_train, start=90, end=250)
     
     
     individualsDistribution(N)
