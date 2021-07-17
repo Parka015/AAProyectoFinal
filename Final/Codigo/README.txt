@@ -1,6 +1,8 @@
-PROYECTO FINAL
-Alejandro Pinel Martínez
-Pablo Ruiz Mingorance
+|PROYECTO FINAL|
+
+Autores:
+	-Alejandro Pinel Martínez
+	-Pablo Ruiz Mingorance
 
 Para ejecutar nuestro código es necesario seguir los siguientes pasos:
 
