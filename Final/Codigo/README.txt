@@ -1,4 +1,4 @@
-|PROYECTO FINAL|
+-|PROYECTO FINAL|-
 
 Autores:
 	-Alejandro Pinel Martínez
